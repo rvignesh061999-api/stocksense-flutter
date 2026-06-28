@@ -80,7 +80,7 @@ jobs:
           distributionPath=wrapper/dists
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
-          distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-all.zip
+          distributionUrl=https\\://services.gradle.org/distributions/gradle-8.3-all.zip
           """)
 
           # ── android/build.gradle ─────────────────────────────────────────
@@ -88,7 +88,7 @@ jobs:
               ext.kotlin_version = '1.9.24'
               repositories { google(); mavenCentral() }
               dependencies {
-                  classpath 'com.android.tools.build:gradle:8.3.0'
+                  classpath 'com.android.tools.build:gradle:8.1.4'
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
               }
           }
@@ -159,7 +159,7 @@ jobs:
           }
           flutter { source '../..' }
           dependencies {
-              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
               implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24"
               implementation 'androidx.multidex:multidex:2.0.1'
           }
