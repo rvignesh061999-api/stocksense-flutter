@@ -326,19 +326,19 @@ jobs:
             }
             Future<void> showScanProgress({required int scanned,required int total,required int buys,required int shorts,required int scanNum}) async {
               final pct=total>0?scanned/total:0.0;
-              final bar='\\${'\u2588'*(pct*10).round()}\\${'\u2591'*(10-(pct*10).round())}';
+              final bar=String.fromCharCodes(List.filled((pct*10).round(),9608))+String.fromCharCodes(List.filled(10-(pct*10).round(),9617));
               await _p.show(NOTIF_SCAN_PROGRESS,'\\u23f1 StockSense \u2014 Scanning...','\\$bar \\$scanned/\\$total\\n\\U0001f7e2 \\$buys BUY  \\U0001f534 \\$shorts SHORT  |  Scan #\\$scanNum',
                 NotificationDetails(android:AndroidNotificationDetails('stocksense_scan','Scan Progress',importance:Importance.low,priority:Priority.low,ongoing:true,autoCancel:false,showProgress:true,maxProgress:total,progress:scanned,onlyAlertOnce:true)));
             }
             Future<void> showRestCountdown({required int secondsLeft,required int scanNum,required List<String> topSignals}) async {
               final m=secondsLeft~/60;final s=secondsLeft%60;
-              await _p.show(NOTIF_REST_TIMER,'\\u23f3 Next scan in \\${m}m \\${s.toString().padLeft(2,'0')}s','\\${topSignals.take(3).join('  ')}\\nScan #\\$scanNum',
+              await _p.show(NOTIF_REST_TIMER,'\\u23f3 Next scan in \\${m}m \\${s.toString().padLeft(2,"0")}s','\\${topSignals.take(3).join("  ")}\\nScan #\\$scanNum',
                 NotificationDetails(android:AndroidNotificationDetails('stocksense_scan','Scan Progress',importance:Importance.low,priority:Priority.low,ongoing:true,autoCancel:false,onlyAlertOnce:true,
                   actions:[const AndroidNotificationAction('scan_now','\\u26a1 Scan Now',cancelNotification:false),const AndroidNotificationAction('stop_scan','\\u23f9 Stop',cancelNotification:true)])));
             }
             Future<void> showScanComplete({required int scanNum,required int buys,required int shorts,required List<String> topBuys,required List<String> topShorts}) async {
               await _p.show(NOTIF_SCAN_COMPLETE,'\\U0001f4ca Scan #\\$scanNum \u2014 \\${buys+shorts} Signals!',
-                '\\${topBuys.take(2).map((s)=>'\\U0001f7e2 \\$s').join('  ')}  \\${topShorts.take(2).map((s)=>'\\U0001f534 \\$s').join('  ')}',
+                '\\${topBuys.take(2).map((s)=>'\\U0001f7e2 \\$s').join("  ")}  \\${topShorts.take(2).map((s)=>'\\U0001f534 \\$s').join("  ")}',
                 NotificationDetails(android:AndroidNotificationDetails('stocksense_signal','Trade Signals',importance:Importance.high,priority:Priority.high)));
             }
             Future<void> clearAll() async=>await _p.cancelAll();
@@ -359,11 +359,10 @@ jobs:
           bool _stop=false;
           int _scanN=0;
           @pragma('vm:entry-point')
-          void backgroundMain(){
+          void backgroundMain(ServiceInstance svc){
             _stop=false;_scanN=0;
             WidgetsFlutterBinding.ensureInitialized();
             DartPluginRegistrant.ensureInitialized();
-            final svc=FlutterBackgroundService();
             svc.on('stopScan').listen((_){_stop=true;NotificationService().clearAll();});
             svc.on('startScan').listen((_) async{_stop=false;await _runSession(svc);});
           }
@@ -449,11 +448,11 @@ jobs:
             @override Widget build(BuildContext ctx){
               final c=signal.isBuy?const Color(COLOR_GREEN):signal.isShort?const Color(COLOR_RED):Colors.grey;
               return Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.all(12),
-                decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8),border:Border.all(color:c.withValues(alpha:0.3))),
+                decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8),border:Border.all(color:c.withOpacity(0.3))),
                 child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                   Row(children:[Text(signal.signalEmoji,style:const TextStyle(fontSize:16)),const SizedBox(width:8),
                     Text(signal.symbol,style:TextStyle(color:c,fontSize:16,fontWeight:FontWeight.bold)),const SizedBox(width:8),
-                    Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:2),decoration:BoxDecoration(color:c.withValues(alpha:0.15),borderRadius:BorderRadius.circular(4),border:Border.all(color:c.withValues(alpha:0.5))),
+                    Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:2),decoration:BoxDecoration(color:c.withOpacity(0.15),borderRadius:BorderRadius.circular(4),border:Border.all(color:c.withOpacity(0.5))),
                       child:Text('\\${signal.signal} \\${signal.confidence}%',style:TextStyle(color:c,fontSize:12,fontWeight:FontWeight.bold))),
                     const Spacer(),Text('\\u20b9\\${signal.price.toStringAsFixed(2)}',style:const TextStyle(color:Colors.white,fontSize:14,fontWeight:FontWeight.bold))]),
                   const SizedBox(height:8),
@@ -468,8 +467,8 @@ jobs:
                   Row(children:[_l('ENTRY','\\u20b9\\${signal.price.toStringAsFixed(2)}',Colors.white),_l('SL','\\u20b9\\${signal.stopLoss.toStringAsFixed(2)}',const Color(COLOR_RED)),_l('TARGET','\\u20b9\\${signal.target.toStringAsFixed(2)}',const Color(COLOR_GREEN))]),
                 ]));
             }
-            Widget _i(String l,String v,Color c)=>Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:c.withValues(alpha:0.1),borderRadius:BorderRadius.circular(4)),child:Text('\\$l: \\$v',style:TextStyle(color:c,fontSize:10,fontWeight:FontWeight.bold)));
-            Widget _w(String t)=>Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withValues(alpha:0.1),borderRadius:BorderRadius.circular(4),border:Border.all(color:const Color(COLOR_YELLOW).withValues(alpha:0.3))),child:Text(t,style:const TextStyle(color:Color(COLOR_YELLOW),fontSize:10)));
+            Widget _i(String l,String v,Color c)=>Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:c.withOpacity(0.1),borderRadius:BorderRadius.circular(4)),child:Text('\\$l: \\$v',style:TextStyle(color:c,fontSize:10,fontWeight:FontWeight.bold)));
+            Widget _w(String t)=>Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withOpacity(0.1),borderRadius:BorderRadius.circular(4),border:Border.all(color:const Color(COLOR_YELLOW).withOpacity(0.3))),child:Text(t,style:const TextStyle(color:Color(COLOR_YELLOW),fontSize:10)));
             Widget _l(String l,String v,Color c)=>Expanded(child:Column(children:[Text(l,style:const TextStyle(color:Colors.grey,fontSize:10,letterSpacing:1)),Text(v,style:TextStyle(color:c,fontSize:12,fontWeight:FontWeight.bold))]));
           }
           """)
@@ -502,8 +501,8 @@ jobs:
             @override void dispose(){_p?.cancel();_c?.cancel();_r?.cancel();_s?.cancel();super.dispose();}
             Future<void> _start() async{setState((){_run=true;_status='STARTING...';});await _svc.startScan();}
             Future<void> _stop() async{await _svc.stopScan();setState((){_run=false;_rest=false;_status='IDLE \u2014 PRESS START TO BEGIN';});}
-            String get _timer{if(_rest){final m=_restSecs~/60;final s=_restSecs%60;return '\\${m.toString().padLeft(2,'0')}:\\${s.toString().padLeft(2,'0')}';}return '05:00';}
-            Color get _tc=>_rest?const Color(COLOR_YELLOW):_run?const Color(0xFF4499FF):Colors.grey.withValues(alpha:0.3);
+            String get _timer{if(_rest){final m=_restSecs~/60;final s=_restSecs%60;return '\\${m.toString().padLeft(2,"0")}:\\${s.toString().padLeft(2,"0")}';}return '05:00';}
+            Color get _tc=>_rest?const Color(COLOR_YELLOW):_run?const Color(0xFF4499FF):Colors.grey.withOpacity(0.3);
             @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
               body:SingleChildScrollView(child:Column(children:[
                 Container(margin:const EdgeInsets.all(12),padding:const EdgeInsets.symmetric(vertical:30),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
@@ -514,14 +513,14 @@ jobs:
                   Expanded(child:ElevatedButton.icon(onPressed:_run?_stop:null,icon:const Icon(Icons.stop),label:const Text('STOP',style:TextStyle(fontWeight:FontWeight.bold)),style:ElevatedButton.styleFrom(backgroundColor:const Color(COLOR_RED),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:16),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(6))))),
                 ])),
                 if(_run&&!_rest) Container(margin:const EdgeInsets.symmetric(horizontal:12,vertical:4),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
-                  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('SCANNING IN PROGRESS',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:8),ClipRRect(borderRadius:BorderRadius.circular(4),child:LinearProgressIndicator(value:_total>0?_scanned/_total:0,backgroundColor:Colors.grey.withValues(alpha:0.2),valueColor:const AlwaysStoppedAnimation<Color>(Color(COLOR_GREEN)),minHeight:6)),const SizedBox(height:6),Text('\\$_scanned/\\$_total',style:const TextStyle(color:Colors.white,fontSize:13)),Text('Analysing: \\$_cur...',style:const TextStyle(color:Color(COLOR_YELLOW),fontSize:13))])),
+                  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('SCANNING IN PROGRESS',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:8),ClipRRect(borderRadius:BorderRadius.circular(4),child:LinearProgressIndicator(value:_total>0?_scanned/_total:0,backgroundColor:Colors.grey.withOpacity(0.2),valueColor:const AlwaysStoppedAnimation<Color>(Color(COLOR_GREEN)),minHeight:6)),const SizedBox(height:6),Text('\\$_scanned/\\$_total',style:const TextStyle(color:Colors.white,fontSize:13)),Text('Analysing: \\$_cur...',style:const TextStyle(color:Color(COLOR_YELLOW),fontSize:13))])),
                 if(_sigs.isNotEmpty) Container(margin:const EdgeInsets.symmetric(horizontal:12,vertical:4),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
                   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('SCAN #\\$_scanN SUMMARY \u2014 V33',style:const TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:10),
                     Row(children:[_box('BUY',_sigs.where((s)=>s.isBuy).length,const Color(COLOR_GREEN)),const SizedBox(width:8),_box('SHORT',_sigs.where((s)=>s.isShort).length,const Color(COLOR_RED)),const SizedBox(width:8),_box('TOTAL',_sigs.length,Colors.white)]),
                     const SizedBox(height:12),..._sigs.take(5).map((s)=>SignalCard(signal:s))]),),
                 const SizedBox(height:20),
               ])));
-            Widget _box(String l,int n,Color c)=>Expanded(child:Container(padding:const EdgeInsets.symmetric(vertical:12),decoration:BoxDecoration(color:c.withValues(alpha:0.1),borderRadius:BorderRadius.circular(6),border:Border.all(color:c.withValues(alpha:0.3))),child:Column(children:[Text(l,style:TextStyle(color:c,fontSize:11,letterSpacing:1)),Text('\\$n',style:TextStyle(color:c,fontSize:28,fontWeight:FontWeight.bold))])));
+            Widget _box(String l,int n,Color c)=>Expanded(child:Container(padding:const EdgeInsets.symmetric(vertical:12),decoration:BoxDecoration(color:c.withOpacity(0.1),borderRadius:BorderRadius.circular(6),border:Border.all(color:c.withOpacity(0.3))),child:Column(children:[Text(l,style:TextStyle(color:c,fontSize:11,letterSpacing:1)),Text('\\$n',style:TextStyle(color:c,fontSize:28,fontWeight:FontWeight.bold))])));
           }
           """)
 
@@ -555,7 +554,7 @@ jobs:
                 Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
                   child:Column(children:['BULLISH','NEUTRAL','BEARISH'].map((m){final s=_mood==m;final c=m=='BULLISH'?const Color(COLOR_GREEN):m=='BEARISH'?const Color(COLOR_RED):const Color(COLOR_YELLOW);return ListTile(contentPadding:EdgeInsets.zero,title:Text(m,style:TextStyle(color:s?c:Colors.grey,fontWeight:s?FontWeight.bold:FontWeight.normal)),trailing:s?Icon(Icons.check_circle,color:c):null,onTap:()=>setState(()=>_mood=m));}).toList())),
                 const SizedBox(height:20),
-                Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withValues(alpha:0.1),borderRadius:BorderRadius.circular(8),border:Border.all(color:const Color(COLOR_YELLOW).withValues(alpha:0.3))),child:const Text('\\u26a0\\ufe0f PERSONAL USE ONLY \u2014 Not SEBI registered advice. Always use stop-loss.',style:TextStyle(color:Color(COLOR_YELLOW),fontSize:11))),
+                Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withOpacity(0.1),borderRadius:BorderRadius.circular(8),border:Border.all(color:const Color(COLOR_YELLOW).withOpacity(0.3))),child:const Text('\\u26a0\\ufe0f PERSONAL USE ONLY \u2014 Not SEBI registered advice. Always use stop-loss.',style:TextStyle(color:Color(COLOR_YELLOW),fontSize:11))),
               ])));
           }
           """)
@@ -576,13 +575,13 @@ jobs:
             @override void dispose(){_t?.cancel();super.dispose();}
             bool get _open{if(_now.weekday==DateTime.saturday||_now.weekday==DateTime.sunday)return false;final tot=_now.hour*60+_now.minute;return tot>=MARKET_OPEN_HOUR*60+MARKET_OPEN_MIN&&tot<MARKET_CLOSE_HOUR*60+MARKET_CLOSE_MIN;}
             bool get _best{final tot=_now.hour*60+_now.minute;return tot>=BEST_ENTRY_HOUR*60+BEST_ENTRY_MIN&&tot<EXIT_WARNING_HOUR*60+EXIT_WARNING_MIN;}
-            String get _time=>'\\${_now.hour.toString().padLeft(2,'0')}:\\${_now.minute.toString().padLeft(2,'0')}:\\${_now.second.toString().padLeft(2,'0')}';
+            String get _time=>'\\${_now.hour.toString().padLeft(2,"0")}:\\${_now.minute.toString().padLeft(2,"0")}:\\${_now.second.toString().padLeft(2,"0")}';
             @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
               body:SafeArea(child:Column(children:[
                 Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[
                   RichText(text:const TextSpan(children:[TextSpan(text:'STOCK',style:TextStyle(color:Color(COLOR_GREEN),fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'SENSE',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'  V1.0',style:TextStyle(color:Colors.grey,fontSize:12))])),
                   const Spacer(),
-                  Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:(_open?const Color(COLOR_GREEN):Colors.red).withValues(alpha:0.1),borderRadius:BorderRadius.circular(20),border:Border.all(color:(_open?const Color(COLOR_GREEN):Colors.red).withValues(alpha:0.5))),
+                  Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:(_open?const Color(COLOR_GREEN):Colors.red).withOpacity(0.1),borderRadius:BorderRadius.circular(20),border:Border.all(color:(_open?const Color(COLOR_GREEN):Colors.red).withOpacity(0.5))),
                     child:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:7,height:7,decoration:BoxDecoration(color:_open?const Color(COLOR_GREEN):Colors.red,shape:BoxShape.circle)),const SizedBox(width:5),Text(_open?'MARKET OPEN':'MARKET CLOSED',style:TextStyle(color:_open?const Color(COLOR_GREEN):Colors.red,fontSize:10,fontWeight:FontWeight.bold))]))])),
                 Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:6),color:const Color(COLOR_CARD),child:Row(children:[const Text('IST',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(width:12),Text(_time,style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.bold,fontFamily:'monospace')),const Spacer(),if(_open&&_best)const Text('\\u2705 BEST ENTRY WINDOW',style:TextStyle(color:Color(COLOR_GREEN),fontSize:10,fontWeight:FontWeight.bold))])),
                 Container(height:2,decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(COLOR_GREEN),Color(0xFF004422)]))),
