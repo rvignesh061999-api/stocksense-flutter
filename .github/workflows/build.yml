@@ -134,7 +134,7 @@ jobs:
           }
           android {
               namespace "com.stocksense.app"
-              compileSdk 35
+              compileSdk 34
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_1_8
                   targetCompatibility JavaVersion.VERSION_1_8
@@ -144,7 +144,7 @@ jobs:
               defaultConfig {
                   applicationId "com.stocksense.app"
                   minSdk 21
-                  targetSdk 35
+                  targetSdk 34
                   versionCode 1
                   versionName "1.0.0"
                   multiDexEnabled true
