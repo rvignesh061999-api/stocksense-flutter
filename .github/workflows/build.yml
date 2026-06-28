@@ -337,8 +337,10 @@ jobs:
                   actions:[const AndroidNotificationAction('scan_now','\\u26a1 Scan Now',cancelNotification:false),const AndroidNotificationAction('stop_scan','\\u23f9 Stop',cancelNotification:true)])));
             }
             Future<void> showScanComplete({required int scanNum,required int buys,required int shorts,required List<String> topBuys,required List<String> topShorts}) async {
-              await _p.show(NOTIF_SCAN_COMPLETE,'\\U0001f4ca Scan #\\$scanNum \u2014 \\${buys+shorts} Signals!',
-                '\\${topBuys.take(2).map((s)=>'\\U0001f7e2 \\$s').join("  ")}  \\${topShorts.take(2).map((s)=>'\\U0001f534 \\$s').join("  ")}',
+              final buyStr=topBuys.take(2).map((s)=>'\\U0001f7e2 '+s).join('  ');
+              final shortStr=topShorts.take(2).map((s)=>'\\U0001f534 '+s).join('  ');
+              await _p.show(NOTIF_SCAN_COMPLETE,'Scan #\\$scanNum \u2014 \\${buys+shorts} Signals!',
+                '\\$buyStr  \\$shortStr',
                 NotificationDetails(android:AndroidNotificationDetails('stocksense_signal','Trade Signals',importance:Importance.high,priority:Priority.high)));
             }
             Future<void> clearAll() async=>await _p.cancelAll();
