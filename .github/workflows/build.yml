@@ -61,7 +61,7 @@ jobs:
           dependencies:
             flutter:
               sdk: flutter
-            flutter_background_service: ^5.0.2
+            flutter_background_service: ^6.2.0
             flutter_local_notifications: ^17.2.2
             http: ^1.2.1
             shared_preferences: ^2.3.2
