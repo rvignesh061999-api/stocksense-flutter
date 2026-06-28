@@ -65,7 +65,7 @@ jobs:
               ext.kotlin_version = '1.9.0'
               repositories { google(); mavenCentral() }
               dependencies {
-                  classpath 'com.android.tools.build:gradle:8.1.0'
+                  classpath 'com.android.tools.build:gradle:8.3.0'
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
               }
           }
@@ -112,7 +112,7 @@ jobs:
           }
           android {
               namespace "com.stocksense.app"
-              compileSdk 34
+              compileSdk 35
               ndkVersion "25.1.8937393"
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_1_8
@@ -122,7 +122,7 @@ jobs:
               defaultConfig {
                   applicationId "com.stocksense.app"
                   minSdk 21
-                  targetSdk 34
+                  targetSdk 35
                   versionCode 1
                   versionName "1.0.0"
                   multiDexEnabled true
@@ -131,6 +131,7 @@ jobs:
                   release {
                       signingConfig signingConfigs.debug
                       minifyEnabled false
+                      shrinkResources false
                   }
               }
           }
@@ -250,7 +251,7 @@ jobs:
             bool get isBuy=>signal=='BUY';
             bool get isShort=>signal=='SHORT';
             bool get isAvoid=>signal=='AVOID';
-            String get signalEmoji=>isBuy?'馃搱':isShort?'馃搲':'鈿�';
+            String get signalEmoji=>isBuy?'📈':isShort?'📉':'⚪';
             double get stopLoss=>isBuy?price*0.985:price*1.015;
             double get target=>isBuy?price*1.03:price*0.97;
           }
@@ -303,19 +304,19 @@ jobs:
             }
             Future<void> showScanProgress({required int scanned,required int total,required int buys,required int shorts,required int scanNum}) async {
               final pct=total>0?scanned/total:0.0;
-              final bar='${'鈻�'*(pct*10).round()}${'鈻�'*(10-(pct*10).round())}';
-              await _p.show(NOTIF_SCAN_PROGRESS,'鈴� StockSense 鈥� Scanning...','$bar $scanned/$total\n馃煝 $buys BUY  馃敶 $shorts SHORT  |  Scan #$scanNum',
+              final bar='${'█'*(pct*10).round()}${'░'*(10-(pct*10).round())}';
+              await _p.show(NOTIF_SCAN_PROGRESS,'⏱ StockSense — Scanning...','$bar $scanned/$total\n🟢 $buys BUY  🔴 $shorts SHORT  |  Scan #$scanNum',
                 NotificationDetails(android:AndroidNotificationDetails('stocksense_scan','Scan Progress',importance:Importance.low,priority:Priority.low,ongoing:true,autoCancel:false,showProgress:true,maxProgress:total,progress:scanned,onlyAlertOnce:true)));
             }
             Future<void> showRestCountdown({required int secondsLeft,required int scanNum,required List<String> topSignals}) async {
               final m=secondsLeft~/60;final s=secondsLeft%60;
-              await _p.show(NOTIF_REST_TIMER,'鈴� Next scan in ${m}m ${s.toString().padLeft(2,'0')}s','${topSignals.take(3).join('  ')}\nScan #$scanNum',
+              await _p.show(NOTIF_REST_TIMER,'⏳ Next scan in ${m}m ${s.toString().padLeft(2,'0')}s','${topSignals.take(3).join('  ')}\nScan #$scanNum',
                 NotificationDetails(android:AndroidNotificationDetails('stocksense_scan','Scan Progress',importance:Importance.low,priority:Priority.low,ongoing:true,autoCancel:false,onlyAlertOnce:false,
-                  actions:[const AndroidNotificationAction('scan_now','鈿� Scan Now',cancelNotification:false),const AndroidNotificationAction('stop_scan','鈴� Stop',cancelNotification:true)])));
+                  actions:[const AndroidNotificationAction('scan_now','⚡ Scan Now',cancelNotification:false),const AndroidNotificationAction('stop_scan','⏹ Stop',cancelNotification:true)])));
             }
             Future<void> showScanComplete({required int scanNum,required int buys,required int shorts,required List<String> topBuys,required List<String> topShorts}) async {
-              await _p.show(NOTIF_SCAN_COMPLETE,'馃搳 Scan #$scanNum 鈥� ${buys+shorts} Signals!',
-                '${topBuys.take(2).map((s)=>'馃煝 $s').join('  ')}  ${topShorts.take(2).map((s)=>'馃敶 $s').join('  ')}',
+              await _p.show(NOTIF_SCAN_COMPLETE,'📊 Scan #$scanNum — ${buys+shorts} Signals!',
+                '${topBuys.take(2).map((s)=>'🟢 $s').join('  ')}  ${topShorts.take(2).map((s)=>'🔴 $s').join('  ')}',
                 NotificationDetails(android:AndroidNotificationDetails('stocksense_signal','Trade Signals',importance:Importance.high,priority:Priority.high)));
             }
             Future<void> clearAll() async=>await _p.cancelAll();
@@ -363,7 +364,7 @@ jobs:
               svc.invoke('scanComplete',{'scanNum':_scanN,'buys':buys.length,'shorts':shorts.length,
                 'signals':results.map((s)=>{'symbol':s.symbol,'signal':s.signal,'confidence':s.confidence,'price':s.price,'rsi':s.rsi,'volRatio':s.volRatio}).toList()});
               if(_stop) break;
-              await _rest(svc,notif,rest,_scanN,[...buys.take(2).map((s)=>'馃煝 ${s.symbol} ${s.confidence}%'),...shorts.take(2).map((s)=>'馃敶 ${s.symbol} ${s.confidence}%')]);
+              await _rest(svc,notif,rest,_scanN,[...buys.take(2).map((s)=>'🟢 ${s.symbol} ${s.confidence}%'),...shorts.take(2).map((s)=>'🔴 ${s.symbol} ${s.confidence}%')]);
             }
             await notif.clearAll();
             svc.invoke('sessionStopped',{});
@@ -434,7 +435,7 @@ jobs:
                     Text(signal.symbol,style:TextStyle(color:c,fontSize:16,fontWeight:FontWeight.bold)),const SizedBox(width:8),
                     Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:2),decoration:BoxDecoration(color:c.withOpacity(0.15),borderRadius:BorderRadius.circular(4),border:Border.all(color:c.withOpacity(0.5))),
                       child:Text('${signal.signal} ${signal.confidence}%',style:TextStyle(color:c,fontSize:12,fontWeight:FontWeight.bold))),
-                    const Spacer(),Text('鈧�${signal.price.toStringAsFixed(2)}',style:const TextStyle(color:Colors.white,fontSize:14,fontWeight:FontWeight.bold))]),
+                    const Spacer(),Text('₹${signal.price.toStringAsFixed(2)}',style:const TextStyle(color:Colors.white,fontSize:14,fontWeight:FontWeight.bold))]),
                   const SizedBox(height:8),
                   Wrap(spacing:8,runSpacing:4,children:[
                     _i('RSI','${signal.rsi.toStringAsFixed(1)}',signal.rsi>50?const Color(COLOR_GREEN):const Color(COLOR_RED)),
@@ -442,9 +443,9 @@ jobs:
                     _i('EMA',signal.emaBullish?'Bull':'Bear',signal.emaBullish?const Color(COLOR_GREEN):const Color(COLOR_RED)),
                     _i('MACD',signal.macdBull?'Bull':'Bear',signal.macdBull?const Color(COLOR_GREEN):const Color(COLOR_RED)),
                   ]),
-                  if(signal.extended||signal.sectorWeak)...[const SizedBox(height:6),Wrap(spacing:6,children:[if(signal.extended)_w('鈿狅笍 EXTENDED'),if(signal.sectorWeak)_w('鈿狅笍 SECTOR WEAK')])],
+                  if(signal.extended||signal.sectorWeak)...[const SizedBox(height:6),Wrap(spacing:6,children:[if(signal.extended)_w('⚠️ EXTENDED'),if(signal.sectorWeak)_w('⚠️ SECTOR WEAK')])],
                   const SizedBox(height:8),const Divider(color:Color(0xFF222222),height:1),const SizedBox(height:8),
-                  Row(children:[_l('ENTRY','鈧�${signal.price.toStringAsFixed(2)}',Colors.white),_l('SL','鈧�${signal.stopLoss.toStringAsFixed(2)}',const Color(COLOR_RED)),_l('TARGET','鈧�${signal.target.toStringAsFixed(2)}',const Color(COLOR_GREEN))]),
+                  Row(children:[_l('ENTRY','₹${signal.price.toStringAsFixed(2)}',Colors.white),_l('SL','₹${signal.stopLoss.toStringAsFixed(2)}',const Color(COLOR_RED)),_l('TARGET','₹${signal.target.toStringAsFixed(2)}',const Color(COLOR_GREEN))]),
                 ]));
             }
             Widget _i(String l,String v,Color c)=>Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:c.withOpacity(0.1),borderRadius:BorderRadius.circular(4)),child:Text('$l: $v',style:TextStyle(color:c,fontSize:10,fontWeight:FontWeight.bold)));
@@ -469,7 +470,7 @@ jobs:
             final _svc=ScanService();
             bool _run=false,_rest=false;
             int _scanN=0,_scanned=0,_total=88,_buys=0,_shorts=0,_restSecs=300;
-            String _cur='',_status='IDLE 鈥� PRESS START TO BEGIN';
+            String _cur='',_status='IDLE — PRESS START TO BEGIN';
             List<StockSignal> _sigs=[];
             StreamSubscription? _p,_c,_r,_s;
             @override void initState(){super.initState();_listen();}
@@ -477,11 +478,11 @@ jobs:
               _p=_svc.onProgress.listen((d){if(d==null||!mounted)return;setState((){_scanned=d['scanned']??0;_total=d['total']??88;_buys=d['buys']??0;_shorts=d['shorts']??0;_cur=d['currentSymbol']??'';_scanN=d['scanNum']??_scanN;_rest=false;_status='SCAN #$_scanN IN PROGRESS...';});});
               _c=_svc.onScanComplete.listen((d){if(d==null||!mounted)return;final s=(d['signals']as List? ??[]).map((x)=>StockSignal.fromJson(Map<String,dynamic>.from(x))).toList();setState((){_sigs=s.where((x)=>!x.isAvoid).toList();});});
               _r=_svc.onRestTick.listen((d){if(d==null||!mounted)return;setState((){_restSecs=d['secsLeft']??0;_rest=true;_status='RESTING ${_restSecs}S BEFORE SCAN #${_scanN+1}';});});
-              _s=_svc.onStopped.listen((d){if(!mounted)return;setState((){_run=false;_rest=false;_status='IDLE 鈥� PRESS START TO BEGIN';});});
+              _s=_svc.onStopped.listen((d){if(!mounted)return;setState((){_run=false;_rest=false;_status='IDLE — PRESS START TO BEGIN';});});
             }
             @override void dispose(){_p?.cancel();_c?.cancel();_r?.cancel();_s?.cancel();super.dispose();}
             Future<void> _start() async{setState((){_run=true;_status='STARTING...';});await _svc.startScan();}
-            Future<void> _stop() async{await _svc.stopScan();setState((){_run=false;_rest=false;_status='IDLE 鈥� PRESS START TO BEGIN';});}
+            Future<void> _stop() async{await _svc.stopScan();setState((){_run=false;_rest=false;_status='IDLE — PRESS START TO BEGIN';});}
             String get _timer{if(_rest){final m=_restSecs~/60;final s=_restSecs%60;return '${m.toString().padLeft(2,'0')}:${s.toString().padLeft(2,'0')}';}return '05:00';}
             Color get _tc=>_rest?const Color(COLOR_YELLOW):_run?const Color(0xFF4499FF):Colors.grey.withOpacity(0.3);
             @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
@@ -496,7 +497,7 @@ jobs:
                 if(_run&&!_rest) Container(margin:const EdgeInsets.symmetric(horizontal:12,vertical:4),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
                   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('SCANNING IN PROGRESS',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:8),ClipRRect(borderRadius:BorderRadius.circular(4),child:LinearProgressIndicator(value:_total>0?_scanned/_total:0,backgroundColor:Colors.grey.withOpacity(0.2),valueColor:const AlwaysStoppedAnimation<Color>(Color(COLOR_GREEN)),minHeight:6)),const SizedBox(height:6),Text('$_scanned/$_total',style:const TextStyle(color:Colors.white,fontSize:13)),Text('Analysing: $_cur...',style:const TextStyle(color:Color(COLOR_GREEN),fontSize:13))])),
                 if(_sigs.isNotEmpty) Container(margin:const EdgeInsets.symmetric(horizontal:12,vertical:4),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
-                  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('SCAN #$_scanN SUMMARY 鈥� V33',style:const TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:10),
+                  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('SCAN #$_scanN SUMMARY — V33',style:const TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:10),
                     Row(children:[_box('BUY',_sigs.where((s)=>s.isBuy).length,const Color(COLOR_GREEN)),const SizedBox(width:8),_box('SHORT',_sigs.where((s)=>s.isShort).length,const Color(COLOR_RED)),const SizedBox(width:8),_box('TOTAL',_sigs.length,Colors.white)]),
                     const SizedBox(height:12),..._sigs.take(5).map((s)=>SignalCard(signal:s))])),
                 const SizedBox(height:20),
@@ -519,24 +520,24 @@ jobs:
             int _rest=300;String _mood='NEUTRAL';
             @override void initState(){super.initState();_load();}
             Future<void> _load() async{final p=await SharedPreferences.getInstance();setState((){_cap.text=(p.getDouble('capital')??10591).toStringAsFixed(0);_rest=p.getInt('rest_duration')??300;_mood=p.getString('market_mood')??'NEUTRAL';});}
-            Future<void> _save() async{final p=await SharedPreferences.getInstance();await p.setDouble('capital',double.tryParse(_cap.text)??10591);await p.setInt('rest_duration',_rest);await p.setString('market_mood',_mood);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('鉁� Settings saved'),backgroundColor:Color(COLOR_GREEN),duration:Duration(seconds:2)));}
+            Future<void> _save() async{final p=await SharedPreferences.getInstance();await p.setDouble('capital',double.tryParse(_cap.text)??10591);await p.setInt('rest_duration',_rest);await p.setString('market_mood',_mood);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('✅ Settings saved'),backgroundColor:Color(COLOR_GREEN),duration:Duration(seconds:2)));}
             @override void dispose(){_cap.dispose();super.dispose();}
             @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
               appBar:AppBar(title:const Text('SETTINGS'),actions:[TextButton(onPressed:_save,child:const Text('SAVE',style:TextStyle(color:Color(COLOR_GREEN),fontWeight:FontWeight.bold)))]),
               body:SingleChildScrollView(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                const Text('馃挵 TRADING CAPITAL',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
-                Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),child:Row(children:[const Text('鈧� ',style:TextStyle(color:Color(COLOR_GREEN),fontSize:20)),Expanded(child:TextField(controller:_cap,keyboardType:TextInputType.number,style:const TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold),decoration:const InputDecoration(border:InputBorder.none)))])),
+                const Text('💰 TRADING CAPITAL',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
+                Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),child:Row(children:[const Text('₹ ',style:TextStyle(color:Color(COLOR_GREEN),fontSize:20)),Expanded(child:TextField(controller:_cap,keyboardType:TextInputType.number,style:const TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold),decoration:const InputDecoration(border:InputBorder.none)))])),
                 const SizedBox(height:16),
-                const Text('鈿欙笍 TIMER SETTINGS',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
+                const Text('⚙️ TIMER SETTINGS',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
                 Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
                   child:Row(children:[const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Rest Duration',style:TextStyle(color:Colors.white,fontSize:14)),Text('Gap between scans',style:TextStyle(color:Colors.grey,fontSize:11))])),
                     DropdownButton<int>(value:_rest,dropdownColor:const Color(COLOR_CARD),style:const TextStyle(color:Colors.white),underline:const SizedBox(),items:const[DropdownMenuItem(value:180,child:Text('3 min')),DropdownMenuItem(value:300,child:Text('5 min')),DropdownMenuItem(value:420,child:Text('7 min'))],onChanged:(v)=>setState(()=>_rest=v!))])),
                 const SizedBox(height:16),
-                const Text('馃搳 MARKET MOOD',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
+                const Text('📊 MARKET MOOD',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
                 Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
                   child:Column(children:['BULLISH','NEUTRAL','BEARISH'].map((m){final s=_mood==m;final c=m=='BULLISH'?const Color(COLOR_GREEN):m=='BEARISH'?const Color(COLOR_RED):const Color(COLOR_YELLOW);return ListTile(contentPadding:EdgeInsets.zero,title:Text(m,style:TextStyle(color:s?c:Colors.grey,fontWeight:s?FontWeight.bold:FontWeight.normal)),trailing:s?Icon(Icons.check_circle,color:c):null,onTap:()=>setState(()=>_mood=m));}).toList())),
                 const SizedBox(height:20),
-                Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withOpacity(0.1),borderRadius:BorderRadius.circular(8),border:Border.all(color:const Color(COLOR_YELLOW).withOpacity(0.3))),child:const Text('鈿狅笍 PERSONAL USE ONLY 鈥� Not SEBI registered advice. Always use stop-loss.',style:TextStyle(color:Color(COLOR_YELLOW),fontSize:11))),
+                Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withOpacity(0.1),borderRadius:BorderRadius.circular(8),border:Border.all(color:const Color(COLOR_YELLOW).withOpacity(0.3))),child:const Text('⚠️ PERSONAL USE ONLY — Not SEBI registered advice. Always use stop-loss.',style:TextStyle(color:Color(COLOR_YELLOW),fontSize:11))),
               ])));
           }
           EOF
@@ -566,7 +567,7 @@ jobs:
                   const Spacer(),
                   Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:(_open?const Color(COLOR_GREEN):Colors.red).withOpacity(0.1),borderRadius:BorderRadius.circular(20),border:Border.all(color:(_open?const Color(COLOR_GREEN):Colors.red).withOpacity(0.5))),
                     child:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:7,height:7,decoration:BoxDecoration(color:_open?const Color(COLOR_GREEN):Colors.red,shape:BoxShape.circle)),const SizedBox(width:5),Text(_open?'MARKET OPEN':'MARKET CLOSED',style:TextStyle(color:_open?const Color(COLOR_GREEN):Colors.red,fontSize:10,fontWeight:FontWeight.bold))]))])),
-                Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:6),color:const Color(COLOR_CARD),child:Row(children:[const Text('IST',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(width:12),Text(_time,style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.bold,fontFamily:'monospace')),const Spacer(),if(_open&&_best)const Text('鉁� BEST ENTRY WINDOW',style:TextStyle(color:Color(COLOR_GREEN),fontSize:10,fontWeight:FontWeight.bold))])),
+                Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:6),color:const Color(COLOR_CARD),child:Row(children:[const Text('IST',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(width:12),Text(_time,style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.bold,fontFamily:'monospace')),const Spacer(),if(_open&&_best)const Text('✅ BEST ENTRY WINDOW',style:TextStyle(color:Color(COLOR_GREEN),fontSize:10,fontWeight:FontWeight.bold))])),
                 Container(height:2,decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(COLOR_GREEN),Color(0xFF004422)]))),
                 Expanded(child:IndexedStack(index:_idx,children:const[TimerScanScreen(),SettingsScreen()])),
               ])),
@@ -617,6 +618,6 @@ jobs:
 
       - name: Build Summary
         run: |
-          echo "鉁� StockSense APK built successfully!"
+          echo "✅ StockSense APK built successfully!"
           ls -lh build/app/outputs/flutter-apk/app-release.apk
-          echo "馃摜 Download from Actions tab 鈫� StockSense-APK"
+          echo "📥 Download from Actions tab → StockSense-APK"
