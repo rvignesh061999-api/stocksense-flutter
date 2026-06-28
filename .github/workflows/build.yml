@@ -72,6 +72,8 @@ jobs:
             flutter_lints: ^3.0.0
           flutter:
             uses-material-design: true
+          dependency_overrides:
+            flutter_background_service_android: ^6.3.1
           """)
 
           # ── gradle wrapper ───────────────────────────────────────────────
@@ -80,21 +82,21 @@ jobs:
           distributionPath=wrapper/dists
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
-          distributionUrl=https\\://services.gradle.org/distributions/gradle-7.6.3-all.zip
+          distributionUrl=https\\://services.gradle.org/distributions/gradle-8.3-all.zip
           """)
 
           # ── android/build.gradle ─────────────────────────────────────────
           w('android/build.gradle', """buildscript {
-              ext.kotlin_version = '1.8.22'
+              ext.kotlin_version = '1.9.10'
               repositories { google(); mavenCentral() }
               dependencies {
-                  classpath 'com.android.tools.build:gradle:7.4.2'
+                  classpath 'com.android.tools.build:gradle:8.1.4'
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
               }
           }
           allprojects { repositories { google(); mavenCentral() } }
           subprojects { project.evaluationDependsOn(':app') }
-          tasks.register("clean", Delete) { delete rootProject.buildDir }
+          tasks.register("clean", Delete) { delete rootProject.layout.buildDirectory }
           """)
 
           # ── android/settings.gradle ──────────────────────────────────────
@@ -160,7 +162,7 @@ jobs:
           flutter { source '../..' }
           dependencies {
               coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
-              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
+              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.10"
               implementation 'androidx.multidex:multidex:2.0.1'
           }
           """)
