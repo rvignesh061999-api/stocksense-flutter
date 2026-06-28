@@ -61,7 +61,7 @@ jobs:
           dependencies:
             flutter:
               sdk: flutter
-            flutter_background_service: ^6.2.0
+            flutter_background_service: ^5.1.0
             flutter_local_notifications: ^17.2.2
             http: ^1.2.1
             shared_preferences: ^2.3.2
@@ -80,7 +80,7 @@ jobs:
           distributionPath=wrapper/dists
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
-          distributionUrl=https\\://services.gradle.org/distributions/gradle-8.3-all.zip
+          distributionUrl=https\\://services.gradle.org/distributions/gradle-7.6.3-all.zip
           """)
 
           # ── android/build.gradle ─────────────────────────────────────────
@@ -88,13 +88,13 @@ jobs:
               ext.kotlin_version = '1.9.24'
               repositories { google(); mavenCentral() }
               dependencies {
-                  classpath 'com.android.tools.build:gradle:8.1.4'
+                  classpath 'com.android.tools.build:gradle:7.4.2'
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
               }
           }
           allprojects { repositories { google(); mavenCentral() } }
           subprojects { project.evaluationDependsOn(':app') }
-          tasks.register("clean", Delete) { delete rootProject.layout.buildDirectory }
+          tasks.register("clean", Delete) { delete rootProject.buildDir }
           """)
 
           # ── android/settings.gradle ──────────────────────────────────────
