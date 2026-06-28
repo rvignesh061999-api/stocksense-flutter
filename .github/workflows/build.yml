@@ -38,605 +38,589 @@ jobs:
           mkdir -p android/app/src/main/kotlin/com/stocksense/app
           mkdir -p android/gradle/wrapper
 
-      - name: Create pubspec.yaml
-        run: |
-          cat > pubspec.yaml << 'EOF'
-name: stocksense
-description: StockSense Trading App
-publish_to: none
-version: 1.0.0+1
-environment:
-  sdk: '>=3.0.0 <4.0.0'
-dependencies:
-  flutter:
-    sdk: flutter
-  flutter_background_service: ^5.0.2
-  flutter_local_notifications: ^17.2.2
-  http: ^1.2.1
-  shared_preferences: ^2.3.2
-  cupertino_icons: ^1.0.6
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.0
-flutter:
-  uses-material-design: true
-EOF
-
-      - name: Create gradle wrapper properties
-        run: |
-          cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
-distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip
-EOF
-
-      - name: Create android/build.gradle
-        run: |
-          cat > android/build.gradle << 'EOF'
-buildscript {
-    ext.kotlin_version = '1.9.24'
-    repositories { google(); mavenCentral() }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.3.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-allprojects { repositories { google(); mavenCentral() } }
-subprojects { project.evaluationDependsOn(':app') }
-tasks.register("clean", Delete) { delete rootProject.layout.buildDirectory }
-EOF
-
-      - name: Create android/settings.gradle
-        run: |
-          cat > android/settings.gradle << 'EOF'
-pluginManagement {
-    def flutterSdkPath = {
-        def properties = new Properties()
-        file("local.properties").withInputStream { properties.load(it) }
-        def flutterSdkPath = properties.getProperty("flutter.sdk")
-        assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
-        return flutterSdkPath
-    }()
-    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
-    repositories { google(); mavenCentral(); gradlePluginPortal() }
-}
-plugins { id "dev.flutter.flutter-plugin-loader" version "1.0.0" }
-include ":app"
-EOF
-
-      - name: Create android/gradle.properties
-        run: |
-          cat > android/gradle.properties << 'EOF'
-org.gradle.jvmargs=-Xmx4G
-android.useAndroidX=true
-android.enableJetifier=true
-EOF
-
-      - name: Create local.properties
-        run: |
-          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
-          echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
-
-      - name: Create android/app/build.gradle
-        run: |
-          cat > android/app/build.gradle << 'EOF'
-plugins {
-    id "com.android.application"
-    id "kotlin-android"
-    id "dev.flutter.flutter-gradle-plugin"
-}
-android {
-    namespace "com.stocksense.app"
-    compileSdk 35
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-    kotlinOptions { jvmTarget = '1.8' }
-    defaultConfig {
-        applicationId "com.stocksense.app"
-        minSdk 21
-        targetSdk 35
-        versionCode 1
-        versionName "1.0.0"
-        multiDexEnabled true
-    }
-    buildTypes {
-        release {
-            signingConfig signingConfigs.debug
-            minifyEnabled false
-            shrinkResources false
-        }
-    }
-}
-flutter { source '../..' }
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24"
-    implementation 'androidx.multidex:multidex:2.0.1'
-}
-EOF
-
-      - name: Create AndroidManifest.xml
-        run: |
-          cat > android/app/src/main/AndroidManifest.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.VIBRATE"/>
-    <application android:label="StockSense" android:name="${applicationName}" android:icon="@mipmap/ic_launcher">
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop"
-            android:theme="@style/LaunchTheme"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-            android:hardwareAccelerated="true" android:windowSoftInputMode="adjustResize">
-            <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme"/>
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity>
-        <service android:name="id.flutter.flutter_background_service.BackgroundService"
-            android:foregroundServiceType="dataSync" android:exported="false"/>
-        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
-        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
-            <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter>
-        </receiver>
-        <meta-data android:name="flutterEmbedding" android:value="2"/>
-    </application>
-</manifest>
-EOF
-
-      - name: Create styles.xml
-        run: |
-          cat > android/app/src/main/res/values/styles.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">@android:color/black</item>
-    </style>
-    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">@android:color/black</item>
-    </style>
-</resources>
-EOF
-
-      - name: Create launcher icon
+      - name: Write all project files
         run: |
           python3 << 'PYEOF'
-import struct, zlib, base64
+          import os, struct, zlib
 
-def make_png(size, r, g, b):
-    def chunk(name, data):
-        c = zlib.crc32(name + data) & 0xffffffff
-        return struct.pack('>I', len(data)) + name + data + struct.pack('>I', c)
-    ihdr = struct.pack('>IIBBBBB', size, size, 8, 2, 0, 0, 0)
-    raw = b''
-    for _ in range(size):
-        row = b'\x00'
-        for _ in range(size):
-            row += bytes([r, g, b])
-        raw += row
-    idat = zlib.compress(raw)
-    return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', ihdr) + chunk(b'IDAT', idat) + chunk(b'IEND', b'')
+          def w(path, content):
+              os.makedirs(os.path.dirname(path), exist_ok=True) if os.path.dirname(path) else None
+              open(path, 'w').write(content)
 
-sizes = {'mipmap-mdpi':48,'mipmap-hdpi':72,'mipmap-xhdpi':96,'mipmap-xxhdpi':144,'mipmap-xxxhdpi':192}
-for folder, size in sizes.items():
-    png = make_png(size, 0, 200, 100)
-    with open(f'android/app/src/main/res/{folder}/ic_launcher.png','wb') as f:
-        f.write(png)
-print("Icons created")
-PYEOF
+          def wb(path, data):
+              os.makedirs(os.path.dirname(path), exist_ok=True) if os.path.dirname(path) else None
+              open(path, 'wb').write(data)
 
-      - name: Create MainActivity.kt
-        run: |
-          cat > android/app/src/main/kotlin/com/stocksense/app/MainActivity.kt << 'EOF'
-package com.stocksense.app
-import io.flutter.embedding.android.FlutterActivity
-class MainActivity: FlutterActivity()
-EOF
+          # ── pubspec.yaml ────────────────────────────────────────────────
+          w('pubspec.yaml', """name: stocksense
+          description: StockSense Trading App
+          publish_to: none
+          version: 1.0.0+1
+          environment:
+            sdk: '>=3.0.0 <4.0.0'
+          dependencies:
+            flutter:
+              sdk: flutter
+            flutter_background_service: ^5.0.2
+            flutter_local_notifications: ^17.2.2
+            http: ^1.2.1
+            shared_preferences: ^2.3.2
+            cupertino_icons: ^1.0.6
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^3.0.0
+          flutter:
+            uses-material-design: true
+          """)
 
-      - name: Create all Dart files
-        run: |
-          cat > lib/constants.dart << 'EOF'
-const String APP_VERSION = 'V1.0.0';
-const String SERVER_URL = 'https://stock-sense-server--rvignesh061999.replit.app/api';
-const List<String> ALL_STOCKS = [
-  'HDFCBANK','ICICIBANK','KOTAKBANK','AXISBANK','SBIN','BANKBARODA','PNB','INDUSINDBK','YESBANK','FEDERALBNK',
-  'CANBK','BAJFINANCE','BAJAJFINSV','MUTHOOTFIN','LICHSGFIN','LICI','SBILIFE','HDFCLIFE',
-  'TCS','INFY','WIPRO','HCLTECH','TECHM','LTIM','TATACOMM','MPHASIS','PERSISTENT',
-  'RELIANCE','ONGC','IOC','BPCL','COALINDIA','BHARTIARTL','IDEA',
-  'TATAMOTORS','MARUTI','BAJAJ-AUTO','EICHERMOT','HEROMOTOCO','TVSMOTOR',
-  'TATASTEEL','JSWSTEEL','HINDALCO','VEDL','SAIL',
-  'NTPC','POWERGRID','TATAPOWER','ADANIPOWER','TORNTPOWER',
-  'ADANIGREEN','RPOWER','SUZLON','IREDA',
-  'BEL','BHEL','BEML','HAL','GRSE','MAZDOCK','COCHINSHIP','HBLENGINE',
-  'LT','NBCC','HUDCO','ADANIPORTS','ADANIENT','IRFC','RVNL',
-  'SUNPHARMA','DRREDDY','CIPLA','APOLLOHOSP','DIVISLAB','BIOCON','AUROPHARMA',
-  'ITC','HINDUNILVR','NESTLEIND','BRITANNIA','DABUR','MARICO',
-  'ASIANPAINT','TITAN','HAVELLS','VOLTAS','DIXON',
-  'ZOMATO','IRCTC','NYKAA','PAYTM','SWIGGY',
-];
-const int MARKET_OPEN_HOUR=9,MARKET_OPEN_MIN=15;
-const int MARKET_CLOSE_HOUR=15,MARKET_CLOSE_MIN=30;
-const int BEST_ENTRY_HOUR=10,BEST_ENTRY_MIN=0;
-const int EXIT_WARNING_HOUR=11,EXIT_WARNING_MIN=30;
-const int COLOR_GREEN=0xFF00FF88,COLOR_RED=0xFFFF4444;
-const int COLOR_YELLOW=0xFFFFAA00,COLOR_BG=0xFF0A0A0A,COLOR_CARD=0xFF111111;
-const int NOTIF_SCAN_PROGRESS=1,NOTIF_SCAN_COMPLETE=2,NOTIF_REST_TIMER=3;
-EOF
+          # ── gradle wrapper ───────────────────────────────────────────────
+          w('android/gradle/wrapper/gradle-wrapper.properties',
+          """distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-all.zip
+          """)
 
-          cat > lib/models/signal.dart << 'EOF'
-class StockSignal {
-  final String symbol,signal,candle;
-  final int confidence;
-  final double price,rsi,volRatio;
-  final bool emaBullish,aboveVwap,macdBull,extended,sectorWeak;
-  final DateTime scannedAt;
-  StockSignal({required this.symbol,required this.signal,required this.confidence,
-    required this.price,required this.rsi,required this.volRatio,
-    required this.emaBullish,required this.aboveVwap,required this.candle,
-    required this.macdBull,this.extended=false,this.sectorWeak=false,DateTime? scannedAt})
-    :scannedAt=scannedAt??DateTime.now();
-  factory StockSignal.fromJson(Map<String,dynamic> j)=>StockSignal(
-    symbol:j['symbol']??'',signal:j['signal']??'AVOID',
-    confidence:(j['confidence']??0).toInt(),price:(j['price']??0.0).toDouble(),
-    rsi:(j['rsi']??0.0).toDouble(),volRatio:(j['volRatio']??0.0).toDouble(),
-    emaBullish:j['emaBullish']??false,aboveVwap:j['aboveVwap']??false,
-    candle:j['candle']??'',macdBull:j['macdBull']??false,
-    extended:j['extended']??false,sectorWeak:j['sectorWeak']??false);
-  bool get isBuy=>signal=='BUY';
-  bool get isShort=>signal=='SHORT';
-  bool get isAvoid=>signal=='AVOID';
-  String get signalEmoji=>isBuy?'📈':isShort?'📉':'⚪';
-  double get stopLoss=>isBuy?price*0.985:price*1.015;
-  double get target=>isBuy?price*1.03:price*0.97;
-}
-EOF
+          # ── android/build.gradle ─────────────────────────────────────────
+          w('android/build.gradle', """buildscript {
+              ext.kotlin_version = '1.9.24'
+              repositories { google(); mavenCentral() }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.3.0'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+              }
+          }
+          allprojects { repositories { google(); mavenCentral() } }
+          subprojects { project.evaluationDependsOn(':app') }
+          tasks.register("clean", Delete) { delete rootProject.layout.buildDirectory }
+          """)
 
-          cat > lib/services/api_service.dart << 'EOF'
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../constants.dart';
-import '../models/signal.dart';
-class ApiService {
-  static final ApiService _i=ApiService._();
-  factory ApiService()=>_i;
-  ApiService._();
-  Future<Map<String,dynamic>> getStatus() async {
-    try {
-      final r=await http.get(Uri.parse('$SERVER_URL/status')).timeout(const Duration(seconds:10));
-      if(r.statusCode==200) return {...json.decode(r.body),'online':true};
-      return {'online':false};
-    } catch(e){return {'online':false};}
-  }
-  Future<StockSignal?> scanStock(String symbol,{double capital=10000.0}) async {
-    try {
-      final r=await http.get(Uri.parse('$SERVER_URL/scan?symbol=$symbol&capital=$capital')).timeout(const Duration(seconds:15));
-      if(r.statusCode==200) return StockSignal.fromJson(json.decode(r.body));
-      return null;
-    } catch(e){return null;}
-  }
-}
-EOF
+          # ── android/settings.gradle ──────────────────────────────────────
+          w('android/settings.gradle', """pluginManagement {
+              def flutterSdkPath = {
+                  def properties = new Properties()
+                  file("local.properties").withInputStream { properties.load(it) }
+                  def flutterSdkPath = properties.getProperty("flutter.sdk")
+                  assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+                  return flutterSdkPath
+              }()
+              includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          plugins { id "dev.flutter.flutter-plugin-loader" version "1.0.0" }
+          include ":app"
+          """)
 
-          cat > lib/services/notification_service.dart << 'EOF'
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../constants.dart';
-class NotificationService {
-  static final NotificationService _i=NotificationService._();
-  factory NotificationService()=>_i;
-  NotificationService._();
-  final _p=FlutterLocalNotificationsPlugin();
-  bool _init=false;
-  Future<void> init() async {
-    if(_init) return;
-    await _p.initialize(const InitializationSettings(android:AndroidInitializationSettings('@mipmap/ic_launcher')));
-    final ap=_p.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    await ap?.createNotificationChannel(const AndroidNotificationChannel('stocksense_scan','Scan Progress',importance:Importance.low,playSound:false,enableVibration:false));
-    await ap?.createNotificationChannel(const AndroidNotificationChannel('stocksense_signal','Trade Signals',importance:Importance.high));
-    _init=true;
-  }
-  Future<void> showScanProgress({required int scanned,required int total,required int buys,required int shorts,required int scanNum}) async {
-    final pct=total>0?scanned/total:0.0;
-    final bar='${'█'*(pct*10).round()}${'░'*(10-(pct*10).round())}';
-    await _p.show(NOTIF_SCAN_PROGRESS,'⏱ StockSense — Scanning...','$bar $scanned/$total\n🟢 $buys BUY  🔴 $shorts SHORT  |  Scan #$scanNum',
-      NotificationDetails(android:AndroidNotificationDetails('stocksense_scan','Scan Progress',importance:Importance.low,priority:Priority.low,ongoing:true,autoCancel:false,showProgress:true,maxProgress:total,progress:scanned,onlyAlertOnce:true)));
-  }
-  Future<void> showRestCountdown({required int secondsLeft,required int scanNum,required List<String> topSignals}) async {
-    final m=secondsLeft~/60;final s=secondsLeft%60;
-    await _p.show(NOTIF_REST_TIMER,'⏳ Next scan in ${m}m ${s.toString().padLeft(2,'0')}s','${topSignals.take(3).join('  ')}\nScan #$scanNum',
-      NotificationDetails(android:AndroidNotificationDetails('stocksense_scan','Scan Progress',importance:Importance.low,priority:Priority.low,ongoing:true,autoCancel:false,onlyAlertOnce:true,
-        actions:[const AndroidNotificationAction('scan_now','⚡ Scan Now',cancelNotification:false),const AndroidNotificationAction('stop_scan','⏹ Stop',cancelNotification:true)])));
-  }
-  Future<void> showScanComplete({required int scanNum,required int buys,required int shorts,required List<String> topBuys,required List<String> topShorts}) async {
-    await _p.show(NOTIF_SCAN_COMPLETE,'📊 Scan #$scanNum — ${buys+shorts} Signals!',
-      '${topBuys.take(2).map((s)=>'🟢 $s').join('  ')}  ${topShorts.take(2).map((s)=>'🔴 $s').join('  ')}',
-      NotificationDetails(android:AndroidNotificationDetails('stocksense_signal','Trade Signals',importance:Importance.high,priority:Priority.high)));
-  }
-  Future<void> clearAll() async=>await _p.cancelAll();
-}
-EOF
+          # ── android/gradle.properties ────────────────────────────────────
+          w('android/gradle.properties',
+          """org.gradle.jvmargs=-Xmx4G
+          android.useAndroidX=true
+          android.enableJetifier=true
+          """)
 
-          cat > lib/services/scan_service.dart << 'EOF'
-import 'dart:async';
-import 'dart:ui';
-import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_background_service_android/flutter_background_service_android.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'api_service.dart';
-import 'notification_service.dart';
-import '../constants.dart';
-import '../models/signal.dart';
-bool _stop=false;
-int _scanN=0;
-@pragma('vm:entry-point')
-void backgroundMain(){
-  _stop=false;_scanN=0;
-  WidgetsFlutterBinding.ensureInitialized();
-  DartPluginRegistrant.ensureInitialized();
-  final svc=FlutterBackgroundService();
-  svc.on('stopScan').listen((_){_stop=true;NotificationService().clearAll();});
-  svc.on('startScan').listen((_) async{_stop=false;await _runSession(svc);});
-}
-Future<void> _runSession(ServiceInstance svc) async {
-  _stop=false;_scanN=0;
-  final notif=NotificationService();await notif.init();
-  final prefs=await SharedPreferences.getInstance();
-  final rest=prefs.getInt('rest_duration')??300;
-  final capital=prefs.getDouble('capital')??10591;
-  final mood=prefs.getString('market_mood')??'NEUTRAL';
-  while(!_stop){
-    _scanN++;
-    final results=await _scan(svc,notif,capital,_scanN);
-    if(_stop) break;
-    final buys=results.where((s)=>s.isBuy).toList();
-    final shorts=results.where((s)=>s.isShort).toList();
-    await notif.showScanComplete(scanNum:_scanN,buys:buys.length,shorts:shorts.length,
-      topBuys:buys.take(3).map((s)=>'${s.symbol} ${s.confidence}%').toList(),
-      topShorts:shorts.take(3).map((s)=>'${s.symbol} ${s.confidence}%').toList());
-    svc.invoke('scanComplete',{'scanNum':_scanN,'buys':buys.length,'shorts':shorts.length,
-      'signals':results.map((s)=>{'symbol':s.symbol,'signal':s.signal,'confidence':s.confidence,'price':s.price,'rsi':s.rsi,'volRatio':s.volRatio}).toList()});
-    if(_stop) break;
-    await _rest(svc,notif,rest,_scanN,[...buys.take(2).map((s)=>'🟢 ${s.symbol} ${s.confidence}%'),...shorts.take(2).map((s)=>'🔴 ${s.symbol} ${s.confidence}%')]);
-  }
-  await notif.clearAll();
-  svc.invoke('sessionStopped',{});
-}
-Future<List<StockSignal>> _scan(ServiceInstance svc,NotificationService notif,double capital,int scanN) async {
-  final results=<StockSignal>[];int buys=0,shorts=0;
-  for(int i=0;i<ALL_STOCKS.length;i++){
-    if(_stop) break;
-    final sig=await ApiService().scanStock(ALL_STOCKS[i],capital:capital);
-    if(sig!=null){results.add(sig);if(sig.isBuy)buys++;if(sig.isShort)shorts++;}
-    if(i==0||i%5==0||i==ALL_STOCKS.length-1){
-      await notif.showScanProgress(scanned:i+1,total:ALL_STOCKS.length,buys:buys,shorts:shorts,scanNum:scanN);
-      svc.invoke('scanProgress',{'scanned':i+1,'total':ALL_STOCKS.length,'buys':buys,'shorts':shorts,'currentSymbol':ALL_STOCKS[i],'scanNum':scanN});
-    }
-  }
-  return results;
-}
-Future<void> _rest(ServiceInstance svc,NotificationService notif,int total,int scanN,List<String> sigs) async {
-  int left=total;
-  final c=Completer<void>();
-  Timer.periodic(const Duration(seconds:1),(t) async {
-    if(_stop){t.cancel();c.complete();return;}
-    left--;
-    if(left%10==0||left<=5){
-      await notif.showRestCountdown(secondsLeft:left,scanNum:scanN,topSignals:sigs);
-      svc.invoke('restTick',{'secsLeft':left,'scanNum':scanN});
-    }
-    if(left<=0){t.cancel();c.complete();}
-  });
-  await c.future;
-}
-class ScanService {
-  static final ScanService _i=ScanService._();
-  factory ScanService()=>_i;
-  ScanService._();
-  final _svc=FlutterBackgroundService();
-  Future<void> init() async {
-    await _svc.configure(
-      androidConfiguration:AndroidConfiguration(onStart:backgroundMain,autoStart:false,isForegroundMode:true,
-        notificationChannelId:'stocksense_scan',initialNotificationTitle:'StockSense',
-        initialNotificationContent:'Ready to scan',foregroundServiceNotificationId:888),
-      iosConfiguration:IosConfiguration(autoStart:false,onForeground:backgroundMain));
-  }
-  Future<void> startScan() async {if(!await _svc.isRunning()) await _svc.startService();_svc.invoke('startScan',{});}
-  Future<void> stopScan() async=>_svc.invoke('stopScan',{});
-  Stream<Map<String,dynamic>?> get onProgress=>_svc.on('scanProgress');
-  Stream<Map<String,dynamic>?> get onScanComplete=>_svc.on('scanComplete');
-  Stream<Map<String,dynamic>?> get onRestTick=>_svc.on('restTick');
-  Stream<Map<String,dynamic>?> get onStopped=>_svc.on('sessionStopped');
-  Future<bool> get isRunning=>_svc.isRunning();
-}
-EOF
+          # ── local.properties ─────────────────────────────────────────────
+          import subprocess
+          flutter_root = subprocess.check_output(['bash','-c','echo $FLUTTER_ROOT']).decode().strip()
+          android_sdk  = subprocess.check_output(['bash','-c','echo $ANDROID_SDK_ROOT']).decode().strip()
+          w('android/local.properties', f"flutter.sdk={flutter_root}\nsdk.dir={android_sdk}\n")
 
-          cat > lib/widgets/signal_card.dart << 'EOF'
-import 'package:flutter/material.dart';
-import '../models/signal.dart';
-import '../constants.dart';
-class SignalCard extends StatelessWidget {
-  final StockSignal signal;
-  const SignalCard({super.key,required this.signal});
-  @override Widget build(BuildContext ctx){
-    final c=signal.isBuy?const Color(COLOR_GREEN):signal.isShort?const Color(COLOR_RED):Colors.grey;
-    return Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.all(12),
-      decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8),border:Border.all(color:c.withValues(alpha:0.3))),
-      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Row(children:[Text(signal.signalEmoji,style:const TextStyle(fontSize:16)),const SizedBox(width:8),
-          Text(signal.symbol,style:TextStyle(color:c,fontSize:16,fontWeight:FontWeight.bold)),const SizedBox(width:8),
-          Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:2),decoration:BoxDecoration(color:c.withValues(alpha:0.15),borderRadius:BorderRadius.circular(4),border:Border.all(color:c.withValues(alpha:0.5))),
-            child:Text('${signal.signal} ${signal.confidence}%',style:TextStyle(color:c,fontSize:12,fontWeight:FontWeight.bold))),
-          const Spacer(),Text('₹${signal.price.toStringAsFixed(2)}',style:const TextStyle(color:Colors.white,fontSize:14,fontWeight:FontWeight.bold))]),
-        const SizedBox(height:8),
-        Wrap(spacing:8,runSpacing:4,children:[
-          _i('RSI','${signal.rsi.toStringAsFixed(1)}',signal.rsi>50?const Color(COLOR_GREEN):const Color(COLOR_RED)),
-          _i('VOL','${signal.volRatio.toStringAsFixed(2)}x',signal.volRatio>=0.9?const Color(COLOR_GREEN):const Color(COLOR_YELLOW)),
-          _i('EMA',signal.emaBullish?'Bull':'Bear',signal.emaBullish?const Color(COLOR_GREEN):const Color(COLOR_RED)),
-          _i('MACD',signal.macdBull?'Bull':'Bear',signal.macdBull?const Color(COLOR_GREEN):const Color(COLOR_RED)),
-        ]),
-        if(signal.extended||signal.sectorWeak)...[const SizedBox(height:6),Wrap(spacing:6,children:[if(signal.extended)_w('⚠️ EXTENDED'),if(signal.sectorWeak)_w('⚠️ SECTOR WEAK')])],
-        const SizedBox(height:8),const Divider(color:Color(0xFF222222),height:1),const SizedBox(height:8),
-        Row(children:[_l('ENTRY','₹${signal.price.toStringAsFixed(2)}',Colors.white),_l('SL','₹${signal.stopLoss.toStringAsFixed(2)}',const Color(COLOR_RED)),_l('TARGET','₹${signal.target.toStringAsFixed(2)}',const Color(COLOR_GREEN))]),
-      ]));
-  }
-  Widget _i(String l,String v,Color c)=>Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:c.withValues(alpha:0.1),borderRadius:BorderRadius.circular(4)),child:Text('$l: $v',style:TextStyle(color:c,fontSize:10,fontWeight:FontWeight.bold)));
-  Widget _w(String t)=>Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withValues(alpha:0.1),borderRadius:BorderRadius.circular(4),border:Border.all(color:const Color(COLOR_YELLOW).withValues(alpha:0.3))),child:Text(t,style:const TextStyle(color:Color(COLOR_YELLOW),fontSize:10)));
-  Widget _l(String l,String v,Color c)=>Expanded(child:Column(children:[Text(l,style:const TextStyle(color:Colors.grey,fontSize:10,letterSpacing:1)),Text(v,style:TextStyle(color:c,fontSize:12,fontWeight:FontWeight.bold))]));
-}
-EOF
+          # ── android/app/build.gradle ─────────────────────────────────────
+          w('android/app/build.gradle', """plugins {
+              id "com.android.application"
+              id "kotlin-android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
+          android {
+              namespace "com.stocksense.app"
+              compileSdk 35
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_1_8
+                  targetCompatibility JavaVersion.VERSION_1_8
+              }
+              kotlinOptions { jvmTarget = '1.8' }
+              defaultConfig {
+                  applicationId "com.stocksense.app"
+                  minSdk 21
+                  targetSdk 35
+                  versionCode 1
+                  versionName "1.0.0"
+                  multiDexEnabled true
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.debug
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              }
+          }
+          flutter { source '../..' }
+          dependencies {
+              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24"
+              implementation 'androidx.multidex:multidex:2.0.1'
+          }
+          """)
 
-          cat > lib/screens/timer_scan_screen.dart << 'EOF'
-import 'dart:async';
-import 'package:flutter/material.dart';
-import '../services/scan_service.dart';
-import '../models/signal.dart';
-import '../widgets/signal_card.dart';
-import '../constants.dart';
-class TimerScanScreen extends StatefulWidget {
-  const TimerScanScreen({super.key});
-  @override State<TimerScanScreen> createState()=>_S();
-}
-class _S extends State<TimerScanScreen> {
-  final _svc=ScanService();
-  bool _run=false,_rest=false;
-  int _scanN=0,_scanned=0,_total=88,_buys=0,_shorts=0,_restSecs=300;
-  String _cur='',_status='IDLE — PRESS START TO BEGIN';
-  List<StockSignal> _sigs=[];
-  StreamSubscription? _p,_c,_r,_s;
-  @override void initState(){super.initState();_listen();}
-  void _listen(){
-    _p=_svc.onProgress.listen((d){if(d==null||!mounted)return;setState((){_scanned=d['scanned']??0;_total=d['total']??88;_buys=d['buys']??0;_shorts=d['shorts']??0;_cur=d['currentSymbol']??'';_scanN=d['scanNum']??_scanN;_rest=false;_status='SCAN #$_scanN IN PROGRESS...';});});
-    _c=_svc.onScanComplete.listen((d){if(d==null||!mounted)return;final s=(d['signals']as List? ??[]).map((x)=>StockSignal.fromJson(Map<String,dynamic>.from(x))).toList();setState((){_sigs=s.where((x)=>!x.isAvoid).toList();});});
-    _r=_svc.onRestTick.listen((d){if(d==null||!mounted)return;setState((){_restSecs=d['secsLeft']??0;_rest=true;_status='RESTING ${_restSecs}S BEFORE SCAN #${_scanN+1}';});});
-    _s=_svc.onStopped.listen((d){if(!mounted)return;setState((){_run=false;_rest=false;_status='IDLE — PRESS START TO BEGIN';});});
-  }
-  @override void dispose(){_p?.cancel();_c?.cancel();_r?.cancel();_s?.cancel();super.dispose();}
-  Future<void> _start() async{setState((){_run=true;_status='STARTING...';});await _svc.startScan();}
-  Future<void> _stop() async{await _svc.stopScan();setState((){_run=false;_rest=false;_status='IDLE — PRESS START TO BEGIN';});}
-  String get _timer{if(_rest){final m=_restSecs~/60;final s=_restSecs%60;return '${m.toString().padLeft(2,'0')}:${s.toString().padLeft(2,'0')}';}return '05:00';}
-  Color get _tc=>_rest?const Color(COLOR_YELLOW):_run?const Color(0xFF4499FF):Colors.grey.withValues(alpha:0.3);
-  @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
-    body:SingleChildScrollView(child:Column(children:[
-      Container(margin:const EdgeInsets.all(12),padding:const EdgeInsets.symmetric(vertical:30),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
-        child:Column(children:[Text(_status,style:const TextStyle(color:Colors.grey,fontSize:12,letterSpacing:2)),const SizedBox(height:16),Text(_timer,style:TextStyle(color:_tc,fontSize:72,fontWeight:FontWeight.bold,fontFamily:'monospace',letterSpacing:4)),const SizedBox(height:8),Text(_run?'Scan #$_scanN | $_scanned stocks analysed':'Scan #0 | 0 stocks analysed',style:const TextStyle(color:Colors.grey,fontSize:12))])),
-      Padding(padding:const EdgeInsets.all(12),child:Row(children:[
-        Expanded(child:ElevatedButton.icon(onPressed:_run?null:_start,icon:const Icon(Icons.play_arrow),label:const Text('START TIMER SCAN',style:TextStyle(fontWeight:FontWeight.bold)),style:ElevatedButton.styleFrom(backgroundColor:const Color(COLOR_GREEN),foregroundColor:Colors.black,padding:const EdgeInsets.symmetric(vertical:16),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(6))))),
-        const SizedBox(width:8),
-        Expanded(child:ElevatedButton.icon(onPressed:_run?_stop:null,icon:const Icon(Icons.stop),label:const Text('STOP',style:TextStyle(fontWeight:FontWeight.bold)),style:ElevatedButton.styleFrom(backgroundColor:const Color(COLOR_RED),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:16),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(6))))),
-      ])),
-      if(_run&&!_rest) Container(margin:const EdgeInsets.symmetric(horizontal:12,vertical:4),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
-        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('SCANNING IN PROGRESS',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:8),ClipRRect(borderRadius:BorderRadius.circular(4),child:LinearProgressIndicator(value:_total>0?_scanned/_total:0,backgroundColor:Colors.grey.withValues(alpha:0.2),valueColor:const AlwaysStoppedAnimation<Color>(Color(COLOR_GREEN)),minHeight:6)),const SizedBox(height:6),Text('$_scanned/$_total',style:const TextStyle(color:Colors.white,fontSize:13)),Text('Analysing: $_cur...',style:const TextStyle(color:Color(COLOR_YELLOW),fontSize:13))])),
-      if(_sigs.isNotEmpty) Container(margin:const EdgeInsets.symmetric(horizontal:12,vertical:4),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
-        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('SCAN #$_scanN SUMMARY — V33',style:const TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:10),
-          Row(children:[_box('BUY',_sigs.where((s)=>s.isBuy).length,const Color(COLOR_GREEN)),const SizedBox(width:8),_box('SHORT',_sigs.where((s)=>s.isShort).length,const Color(COLOR_RED)),const SizedBox(width:8),_box('TOTAL',_sigs.length,Colors.white)]),
-          const SizedBox(height:12),..._sigs.take(5).map((s)=>SignalCard(signal:s))])),
-      const SizedBox(height:20),
-    ])));
-  Widget _box(String l,int n,Color c)=>Expanded(child:Container(padding:const EdgeInsets.symmetric(vertical:12),decoration:BoxDecoration(color:c.withValues(alpha:0.1),borderRadius:BorderRadius.circular(6),border:Border.all(color:c.withValues(alpha:0.3))),child:Column(children:[Text(l,style:TextStyle(color:c,fontSize:11,letterSpacing:1)),Text('$n',style:TextStyle(color:c,fontSize:28,fontWeight:FontWeight.bold))])));
-}
-EOF
+          # ── AndroidManifest.xml ──────────────────────────────────────────
+          w('android/app/src/main/AndroidManifest.xml', """<?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+              <uses-permission android:name="android.permission.WAKE_LOCK"/>
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+              <uses-permission android:name="android.permission.VIBRATE"/>
+              <application android:label="StockSense" android:name="${applicationName}" android:icon="@mipmap/ic_launcher">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop"
+                      android:theme="@style/LaunchTheme"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                      android:hardwareAccelerated="true" android:windowSoftInputMode="adjustResize">
+                      <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme"/>
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+                  <service android:name="id.flutter.flutter_background_service.BackgroundService"
+                      android:foregroundServiceType="dataSync" android:exported="false"/>
+                  <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
+                  <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+                      <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter>
+                  </receiver>
+                  <meta-data android:name="flutterEmbedding" android:value="2"/>
+              </application>
+          </manifest>
+          """)
 
-          cat > lib/screens/settings_screen.dart << 'EOF'
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../constants.dart';
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
-  @override State<SettingsScreen> createState()=>_S();
-}
-class _S extends State<SettingsScreen> {
-  final _cap=TextEditingController(text:'10591');
-  int _rest=300;String _mood='NEUTRAL';
-  @override void initState(){super.initState();_load();}
-  Future<void> _load() async{final p=await SharedPreferences.getInstance();setState((){_cap.text=(p.getDouble('capital')??10591).toStringAsFixed(0);_rest=p.getInt('rest_duration')??300;_mood=p.getString('market_mood')??'NEUTRAL';});}
-  Future<void> _save() async{final p=await SharedPreferences.getInstance();await p.setDouble('capital',double.tryParse(_cap.text)??10591.0);await p.setInt('rest_duration',_rest);await p.setString('market_mood',_mood);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('✅ Settings saved'),backgroundColor:Color(COLOR_GREEN),duration:Duration(seconds:2)));}
-  @override void dispose(){_cap.dispose();super.dispose();}
-  @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
-    appBar:AppBar(title:const Text('SETTINGS'),actions:[TextButton(onPressed:_save,child:const Text('SAVE',style:TextStyle(color:Color(COLOR_GREEN),fontWeight:FontWeight.bold)))]),
-    body:SingleChildScrollView(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Text('💰 TRADING CAPITAL',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
-      Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),child:Row(children:[const Text('₹ ',style:TextStyle(color:Color(COLOR_GREEN),fontSize:20)),Expanded(child:TextField(controller:_cap,keyboardType:TextInputType.number,style:const TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold),decoration:const InputDecoration(border:InputBorder.none)))])),
-      const SizedBox(height:16),
-      const Text('⚙️ TIMER SETTINGS',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
-      Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
-        child:Row(children:[const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Rest Duration',style:TextStyle(color:Colors.white,fontSize:14)),Text('Gap between scans',style:TextStyle(color:Colors.grey,fontSize:11))])),
-          DropdownButton<int>(value:_rest,dropdownColor:const Color(COLOR_CARD),style:const TextStyle(color:Colors.white),underline:const SizedBox(),items:const[DropdownMenuItem(value:180,child:Text('3 min')),DropdownMenuItem(value:300,child:Text('5 min')),DropdownMenuItem(value:420,child:Text('7 min'))],onChanged:(v)=>setState(()=>_rest=v!))])),
-      const SizedBox(height:16),
-      const Text('📊 MARKET MOOD',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
-      Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
-        child:Column(children:['BULLISH','NEUTRAL','BEARISH'].map((m){final s=_mood==m;final c=m=='BULLISH'?const Color(COLOR_GREEN):m=='BEARISH'?const Color(COLOR_RED):const Color(COLOR_YELLOW);return ListTile(contentPadding:EdgeInsets.zero,title:Text(m,style:TextStyle(color:s?c:Colors.grey,fontWeight:s?FontWeight.bold:FontWeight.normal)),trailing:s?Icon(Icons.check_circle,color:c):null,onTap:()=>setState(()=>_mood=m));}).toList())),
-      const SizedBox(height:20),
-      Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withValues(alpha:0.1),borderRadius:BorderRadius.circular(8),border:Border.all(color:const Color(COLOR_YELLOW).withValues(alpha:0.3))),child:const Text('⚠️ PERSONAL USE ONLY — Not SEBI registered advice. Always use stop-loss.',style:TextStyle(color:Color(COLOR_YELLOW),fontSize:11))),
-    ])));
-}
-EOF
+          # ── styles.xml ───────────────────────────────────────────────────
+          w('android/app/src/main/res/values/styles.xml', """<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+                  <item name="android:windowBackground">@android:color/black</item>
+              </style>
+              <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+                  <item name="android:windowBackground">@android:color/black</item>
+              </style>
+          </resources>
+          """)
 
-          cat > lib/screens/home_screen.dart << 'EOF'
-import 'dart:async';
-import 'package:flutter/material.dart';
-import '../constants.dart';
-import 'timer_scan_screen.dart';
-import 'settings_screen.dart';
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-  @override State<HomeScreen> createState()=>_S();
-}
-class _S extends State<HomeScreen> {
-  int _idx=0;Timer? _t;DateTime _now=DateTime.now();
-  @override void initState(){super.initState();_t=Timer.periodic(const Duration(seconds:1),(_){if(mounted)setState(()=>_now=DateTime.now());});}
-  @override void dispose(){_t?.cancel();super.dispose();}
-  bool get _open{if(_now.weekday==DateTime.saturday||_now.weekday==DateTime.sunday)return false;final tot=_now.hour*60+_now.minute;return tot>=MARKET_OPEN_HOUR*60+MARKET_OPEN_MIN&&tot<MARKET_CLOSE_HOUR*60+MARKET_CLOSE_MIN;}
-  bool get _best{final tot=_now.hour*60+_now.minute;return tot>=BEST_ENTRY_HOUR*60+BEST_ENTRY_MIN&&tot<EXIT_WARNING_HOUR*60+EXIT_WARNING_MIN;}
-  String get _time=>'${_now.hour.toString().padLeft(2,'0')}:${_now.minute.toString().padLeft(2,'0')}:${_now.second.toString().padLeft(2,'0')}';
-  @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
-    body:SafeArea(child:Column(children:[
-      Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[
-        RichText(text:const TextSpan(children:[TextSpan(text:'STOCK',style:TextStyle(color:Color(COLOR_GREEN),fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'SENSE',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'  V1.0',style:TextStyle(color:Colors.grey,fontSize:12))])),
-        const Spacer(),
-        Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:(_open?const Color(COLOR_GREEN):Colors.red).withValues(alpha:0.1),borderRadius:BorderRadius.circular(20),border:Border.all(color:(_open?const Color(COLOR_GREEN):Colors.red).withValues(alpha:0.5))),
-          child:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:7,height:7,decoration:BoxDecoration(color:_open?const Color(COLOR_GREEN):Colors.red,shape:BoxShape.circle)),const SizedBox(width:5),Text(_open?'MARKET OPEN':'MARKET CLOSED',style:TextStyle(color:_open?const Color(COLOR_GREEN):Colors.red,fontSize:10,fontWeight:FontWeight.bold))]))])),
-      Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:6),color:const Color(COLOR_CARD),child:Row(children:[const Text('IST',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(width:12),Text(_time,style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.bold,fontFamily:'monospace')),const Spacer(),if(_open&&_best)const Text('✅ BEST ENTRY WINDOW',style:TextStyle(color:Color(COLOR_GREEN),fontSize:10,fontWeight:FontWeight.bold))])),
-      Container(height:2,decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(COLOR_GREEN),Color(0xFF004422)]))),
-      Expanded(child:IndexedStack(index:_idx,children:const[TimerScanScreen(),SettingsScreen()])),
-    ])),
-    bottomNavigationBar:BottomNavigationBar(currentIndex:_idx,onTap:(i)=>setState(()=>_idx=i),backgroundColor:const Color(COLOR_CARD),selectedItemColor:const Color(COLOR_GREEN),unselectedItemColor:Colors.grey,
-      items:const[BottomNavigationBarItem(icon:Icon(Icons.timer),label:'TIMER SCAN'),BottomNavigationBarItem(icon:Icon(Icons.settings),label:'SETTINGS')]));
-}
-EOF
+          # ── launcher icons (solid green PNG) ─────────────────────────────
+          def make_png(size):
+              def chunk(name, data):
+                  c = zlib.crc32(name + data) & 0xffffffff
+                  return struct.pack('>I', len(data)) + name + data + struct.pack('>I', c)
+              ihdr = struct.pack('>IIBBBBB', size, size, 8, 2, 0, 0, 0)
+              raw = b''.join(b'\x00' + bytes([0, 180, 80] * size) for _ in range(size))
+              return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', ihdr) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
 
-          cat > lib/main.dart << 'EOF'
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'services/notification_service.dart';
-import 'services/scan_service.dart';
-import 'screens/home_screen.dart';
-import 'constants.dart';
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor:Colors.transparent,statusBarIconBrightness:Brightness.light));
-  await NotificationService().init();
-  await ScanService().init();
-  runApp(const StockSenseApp());
-}
-class StockSenseApp extends StatelessWidget {
-  const StockSenseApp({super.key});
-  @override Widget build(BuildContext ctx)=>MaterialApp(
-    title:'StockSense',debugShowCheckedModeBanner:false,
-    theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:const Color(COLOR_BG),
-      colorScheme:const ColorScheme.dark(primary:Color(COLOR_GREEN),secondary:Color(COLOR_YELLOW),error:Color(COLOR_RED),surface:Color(COLOR_CARD)),
-      fontFamily:'monospace',appBarTheme:const AppBarTheme(backgroundColor:Color(COLOR_BG),elevation:0,titleTextStyle:TextStyle(color:Color(COLOR_GREEN),fontSize:18,fontWeight:FontWeight.bold,fontFamily:'monospace',letterSpacing:2))),
-    home:const HomeScreen());
-}
-EOF
+          for folder, size in [('mipmap-mdpi',48),('mipmap-hdpi',72),('mipmap-xhdpi',96),('mipmap-xxhdpi',144),('mipmap-xxxhdpi',192)]:
+              wb(f'android/app/src/main/res/{folder}/ic_launcher.png', make_png(size))
+
+          # ── MainActivity.kt ───────────────────────────────────────────────
+          w('android/app/src/main/kotlin/com/stocksense/app/MainActivity.kt',
+          """package com.stocksense.app
+          import io.flutter.embedding.android.FlutterActivity
+          class MainActivity: FlutterActivity()
+          """)
+
+          # ── lib/constants.dart ────────────────────────────────────────────
+          w('lib/constants.dart', """const String APP_VERSION = 'V1.0.0';
+          const String SERVER_URL = 'https://stock-sense-server--rvignesh061999.replit.app/api';
+          const List<String> ALL_STOCKS = [
+            'HDFCBANK','ICICIBANK','KOTAKBANK','AXISBANK','SBIN','BANKBARODA','PNB','INDUSINDBK','YESBANK','FEDERALBNK',
+            'CANBK','BAJFINANCE','BAJAJFINSV','MUTHOOTFIN','LICHSGFIN','LICI','SBILIFE','HDFCLIFE',
+            'TCS','INFY','WIPRO','HCLTECH','TECHM','LTIM','TATACOMM','MPHASIS','PERSISTENT',
+            'RELIANCE','ONGC','IOC','BPCL','COALINDIA','BHARTIARTL','IDEA',
+            'TATAMOTORS','MARUTI','BAJAJ-AUTO','EICHERMOT','HEROMOTOCO','TVSMOTOR',
+            'TATASTEEL','JSWSTEEL','HINDALCO','VEDL','SAIL',
+            'NTPC','POWERGRID','TATAPOWER','ADANIPOWER','TORNTPOWER',
+            'ADANIGREEN','RPOWER','SUZLON','IREDA',
+            'BEL','BHEL','BEML','HAL','GRSE','MAZDOCK','COCHINSHIP','HBLENGINE',
+            'LT','NBCC','HUDCO','ADANIPORTS','ADANIENT','IRFC','RVNL',
+            'SUNPHARMA','DRREDDY','CIPLA','APOLLOHOSP','DIVISLAB','BIOCON','AUROPHARMA',
+            'ITC','HINDUNILVR','NESTLEIND','BRITANNIA','DABUR','MARICO',
+            'ASIANPAINT','TITAN','HAVELLS','VOLTAS','DIXON',
+            'ZOMATO','IRCTC','NYKAA','PAYTM','SWIGGY',
+          ];
+          const int MARKET_OPEN_HOUR=9,MARKET_OPEN_MIN=15;
+          const int MARKET_CLOSE_HOUR=15,MARKET_CLOSE_MIN=30;
+          const int BEST_ENTRY_HOUR=10,BEST_ENTRY_MIN=0;
+          const int EXIT_WARNING_HOUR=11,EXIT_WARNING_MIN=30;
+          const int COLOR_GREEN=0xFF00FF88,COLOR_RED=0xFFFF4444;
+          const int COLOR_YELLOW=0xFFFFAA00,COLOR_BG=0xFF0A0A0A,COLOR_CARD=0xFF111111;
+          const int NOTIF_SCAN_PROGRESS=1,NOTIF_SCAN_COMPLETE=2,NOTIF_REST_TIMER=3;
+          """)
+
+          # ── lib/models/signal.dart ────────────────────────────────────────
+          w('lib/models/signal.dart', """class StockSignal {
+            final String symbol,signal,candle;
+            final int confidence;
+            final double price,rsi,volRatio;
+            final bool emaBullish,aboveVwap,macdBull,extended,sectorWeak;
+            final DateTime scannedAt;
+            StockSignal({required this.symbol,required this.signal,required this.confidence,
+              required this.price,required this.rsi,required this.volRatio,
+              required this.emaBullish,required this.aboveVwap,required this.candle,
+              required this.macdBull,this.extended=false,this.sectorWeak=false,DateTime? scannedAt})
+              :scannedAt=scannedAt??DateTime.now();
+            factory StockSignal.fromJson(Map<String,dynamic> j)=>StockSignal(
+              symbol:j['symbol']??'',signal:j['signal']??'AVOID',
+              confidence:(j['confidence']??0).toInt(),price:(j['price']??0.0).toDouble(),
+              rsi:(j['rsi']??0.0).toDouble(),volRatio:(j['volRatio']??0.0).toDouble(),
+              emaBullish:j['emaBullish']??false,aboveVwap:j['aboveVwap']??false,
+              candle:j['candle']??'',macdBull:j['macdBull']??false,
+              extended:j['extended']??false,sectorWeak:j['sectorWeak']??false);
+            bool get isBuy=>signal=='BUY';
+            bool get isShort=>signal=='SHORT';
+            bool get isAvoid=>signal=='AVOID';
+            String get signalEmoji=>isBuy?'📈':isShort?'📉':'⚪';
+            double get stopLoss=>isBuy?price*0.985:price*1.015;
+            double get target=>isBuy?price*1.03:price*0.97;
+          }
+          """)
+
+          # ── lib/services/api_service.dart ─────────────────────────────────
+          w('lib/services/api_service.dart', """import 'dart:convert';
+          import 'package:http/http.dart' as http;
+          import '../constants.dart';
+          import '../models/signal.dart';
+          class ApiService {
+            static final ApiService _i=ApiService._();
+            factory ApiService()=>_i;
+            ApiService._();
+            Future<Map<String,dynamic>> getStatus() async {
+              try {
+                final r=await http.get(Uri.parse('\\$SERVER_URL/status')).timeout(const Duration(seconds:10));
+                if(r.statusCode==200) return {...json.decode(r.body),'online':true};
+                return {'online':false};
+              } catch(e){return {'online':false};}
+            }
+            Future<StockSignal?> scanStock(String symbol,{double capital=10000.0}) async {
+              try {
+                final r=await http.get(Uri.parse('\\$SERVER_URL/scan?symbol=\\$symbol&capital=\\$capital')).timeout(const Duration(seconds:15));
+                if(r.statusCode==200) return StockSignal.fromJson(json.decode(r.body));
+                return null;
+              } catch(e){return null;}
+            }
+          }
+          """)
+
+          # ── lib/services/notification_service.dart ────────────────────────
+          w('lib/services/notification_service.dart', """import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+          import '../constants.dart';
+          class NotificationService {
+            static final NotificationService _i=NotificationService._();
+            factory NotificationService()=>_i;
+            NotificationService._();
+            final _p=FlutterLocalNotificationsPlugin();
+            bool _init=false;
+            Future<void> init() async {
+              if(_init) return;
+              await _p.initialize(const InitializationSettings(android:AndroidInitializationSettings('@mipmap/ic_launcher')));
+              final ap=_p.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+              await ap?.createNotificationChannel(const AndroidNotificationChannel('stocksense_scan','Scan Progress',importance:Importance.low,playSound:false,enableVibration:false));
+              await ap?.createNotificationChannel(const AndroidNotificationChannel('stocksense_signal','Trade Signals',importance:Importance.high));
+              _init=true;
+            }
+            Future<void> showScanProgress({required int scanned,required int total,required int buys,required int shorts,required int scanNum}) async {
+              final pct=total>0?scanned/total:0.0;
+              final bar='\\${'\u2588'*(pct*10).round()}\\${'\u2591'*(10-(pct*10).round())}';
+              await _p.show(NOTIF_SCAN_PROGRESS,'\\u23f1 StockSense \u2014 Scanning...','\\$bar \\$scanned/\\$total\\n\\U0001f7e2 \\$buys BUY  \\U0001f534 \\$shorts SHORT  |  Scan #\\$scanNum',
+                NotificationDetails(android:AndroidNotificationDetails('stocksense_scan','Scan Progress',importance:Importance.low,priority:Priority.low,ongoing:true,autoCancel:false,showProgress:true,maxProgress:total,progress:scanned,onlyAlertOnce:true)));
+            }
+            Future<void> showRestCountdown({required int secondsLeft,required int scanNum,required List<String> topSignals}) async {
+              final m=secondsLeft~/60;final s=secondsLeft%60;
+              await _p.show(NOTIF_REST_TIMER,'\\u23f3 Next scan in \\${m}m \\${s.toString().padLeft(2,'0')}s','\\${topSignals.take(3).join('  ')}\\nScan #\\$scanNum',
+                NotificationDetails(android:AndroidNotificationDetails('stocksense_scan','Scan Progress',importance:Importance.low,priority:Priority.low,ongoing:true,autoCancel:false,onlyAlertOnce:true,
+                  actions:[const AndroidNotificationAction('scan_now','\\u26a1 Scan Now',cancelNotification:false),const AndroidNotificationAction('stop_scan','\\u23f9 Stop',cancelNotification:true)])));
+            }
+            Future<void> showScanComplete({required int scanNum,required int buys,required int shorts,required List<String> topBuys,required List<String> topShorts}) async {
+              await _p.show(NOTIF_SCAN_COMPLETE,'\\U0001f4ca Scan #\\$scanNum \u2014 \\${buys+shorts} Signals!',
+                '\\${topBuys.take(2).map((s)=>'\\U0001f7e2 \\$s').join('  ')}  \\${topShorts.take(2).map((s)=>'\\U0001f534 \\$s').join('  ')}',
+                NotificationDetails(android:AndroidNotificationDetails('stocksense_signal','Trade Signals',importance:Importance.high,priority:Priority.high)));
+            }
+            Future<void> clearAll() async=>await _p.cancelAll();
+          }
+          """)
+
+          # ── lib/services/scan_service.dart ────────────────────────────────
+          w('lib/services/scan_service.dart', """import 'dart:async';
+          import 'dart:ui';
+          import 'package:flutter/material.dart';
+          import 'package:flutter_background_service/flutter_background_service.dart';
+          import 'package:flutter_background_service_android/flutter_background_service_android.dart';
+          import 'package:shared_preferences/shared_preferences.dart';
+          import 'api_service.dart';
+          import 'notification_service.dart';
+          import '../constants.dart';
+          import '../models/signal.dart';
+          bool _stop=false;
+          int _scanN=0;
+          @pragma('vm:entry-point')
+          void backgroundMain(){
+            _stop=false;_scanN=0;
+            WidgetsFlutterBinding.ensureInitialized();
+            DartPluginRegistrant.ensureInitialized();
+            final svc=FlutterBackgroundService();
+            svc.on('stopScan').listen((_){_stop=true;NotificationService().clearAll();});
+            svc.on('startScan').listen((_) async{_stop=false;await _runSession(svc);});
+          }
+          Future<void> _runSession(ServiceInstance svc) async {
+            _stop=false;_scanN=0;
+            final notif=NotificationService();await notif.init();
+            final prefs=await SharedPreferences.getInstance();
+            final rest=prefs.getInt('rest_duration')??300;
+            final capital=prefs.getDouble('capital')??10591.0;
+            while(!_stop){
+              _scanN++;
+              final results=await _scan(svc,notif,capital,_scanN);
+              if(_stop) break;
+              final buys=results.where((s)=>s.isBuy).toList();
+              final shorts=results.where((s)=>s.isShort).toList();
+              await notif.showScanComplete(scanNum:_scanN,buys:buys.length,shorts:shorts.length,
+                topBuys:buys.take(3).map((s)=>'\\${s.symbol} \\${s.confidence}%').toList(),
+                topShorts:shorts.take(3).map((s)=>'\\${s.symbol} \\${s.confidence}%').toList());
+              svc.invoke('scanComplete',{'scanNum':_scanN,'buys':buys.length,'shorts':shorts.length,
+                'signals':results.map((s)=>{'symbol':s.symbol,'signal':s.signal,'confidence':s.confidence,'price':s.price,'rsi':s.rsi,'volRatio':s.volRatio}).toList()});
+              if(_stop) break;
+              await _rest(svc,notif,rest,_scanN,[...buys.take(2).map((s)=>'\\U0001f7e2 \\${s.symbol} \\${s.confidence}%'),...shorts.take(2).map((s)=>'\\U0001f534 \\${s.symbol} \\${s.confidence}%')]);
+            }
+            await notif.clearAll();
+            svc.invoke('sessionStopped',{});
+          }
+          Future<List<StockSignal>> _scan(ServiceInstance svc,NotificationService notif,double capital,int scanN) async {
+            final results=<StockSignal>[];int buys=0,shorts=0;
+            for(int i=0;i<ALL_STOCKS.length;i++){
+              if(_stop) break;
+              final sig=await ApiService().scanStock(ALL_STOCKS[i],capital:capital);
+              if(sig!=null){results.add(sig);if(sig.isBuy)buys++;if(sig.isShort)shorts++;}
+              if(i==0||i%5==0||i==ALL_STOCKS.length-1){
+                await notif.showScanProgress(scanned:i+1,total:ALL_STOCKS.length,buys:buys,shorts:shorts,scanNum:scanN);
+                svc.invoke('scanProgress',{'scanned':i+1,'total':ALL_STOCKS.length,'buys':buys,'shorts':shorts,'currentSymbol':ALL_STOCKS[i],'scanNum':scanN});
+              }
+            }
+            return results;
+          }
+          Future<void> _rest(ServiceInstance svc,NotificationService notif,int total,int scanN,List<String> sigs) async {
+            int left=total;
+            final c=Completer<void>();
+            Timer.periodic(const Duration(seconds:1),(t) async {
+              if(_stop){t.cancel();c.complete();return;}
+              left--;
+              if(left%10==0||left<=5){
+                await notif.showRestCountdown(secondsLeft:left,scanNum:scanN,topSignals:sigs);
+                svc.invoke('restTick',{'secsLeft':left,'scanNum':scanN});
+              }
+              if(left<=0){t.cancel();c.complete();}
+            });
+            await c.future;
+          }
+          class ScanService {
+            static final ScanService _i=ScanService._();
+            factory ScanService()=>_i;
+            ScanService._();
+            final _svc=FlutterBackgroundService();
+            Future<void> init() async {
+              await _svc.configure(
+                androidConfiguration:AndroidConfiguration(onStart:backgroundMain,autoStart:false,isForegroundMode:true,
+                  notificationChannelId:'stocksense_scan',initialNotificationTitle:'StockSense',
+                  initialNotificationContent:'Ready to scan',foregroundServiceNotificationId:888),
+                iosConfiguration:IosConfiguration(autoStart:false,onForeground:backgroundMain));
+            }
+            Future<void> startScan() async {if(!await _svc.isRunning()) await _svc.startService();_svc.invoke('startScan',{});}
+            Future<void> stopScan() async=>_svc.invoke('stopScan',{});
+            Stream<Map<String,dynamic>?> get onProgress=>_svc.on('scanProgress');
+            Stream<Map<String,dynamic>?> get onScanComplete=>_svc.on('scanComplete');
+            Stream<Map<String,dynamic>?> get onRestTick=>_svc.on('restTick');
+            Stream<Map<String,dynamic>?> get onStopped=>_svc.on('sessionStopped');
+            Future<bool> get isRunning=>_svc.isRunning();
+          }
+          """)
+
+          # ── lib/widgets/signal_card.dart ──────────────────────────────────
+          w('lib/widgets/signal_card.dart', """import 'package:flutter/material.dart';
+          import '../models/signal.dart';
+          import '../constants.dart';
+          class SignalCard extends StatelessWidget {
+            final StockSignal signal;
+            const SignalCard({super.key,required this.signal});
+            @override Widget build(BuildContext ctx){
+              final c=signal.isBuy?const Color(COLOR_GREEN):signal.isShort?const Color(COLOR_RED):Colors.grey;
+              return Container(margin:const EdgeInsets.only(bottom:10),padding:const EdgeInsets.all(12),
+                decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8),border:Border.all(color:c.withValues(alpha:0.3))),
+                child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Row(children:[Text(signal.signalEmoji,style:const TextStyle(fontSize:16)),const SizedBox(width:8),
+                    Text(signal.symbol,style:TextStyle(color:c,fontSize:16,fontWeight:FontWeight.bold)),const SizedBox(width:8),
+                    Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:2),decoration:BoxDecoration(color:c.withValues(alpha:0.15),borderRadius:BorderRadius.circular(4),border:Border.all(color:c.withValues(alpha:0.5))),
+                      child:Text('\\${signal.signal} \\${signal.confidence}%',style:TextStyle(color:c,fontSize:12,fontWeight:FontWeight.bold))),
+                    const Spacer(),Text('\\u20b9\\${signal.price.toStringAsFixed(2)}',style:const TextStyle(color:Colors.white,fontSize:14,fontWeight:FontWeight.bold))]),
+                  const SizedBox(height:8),
+                  Wrap(spacing:8,runSpacing:4,children:[
+                    _i('RSI','\\${signal.rsi.toStringAsFixed(1)}',signal.rsi>50?const Color(COLOR_GREEN):const Color(COLOR_RED)),
+                    _i('VOL','\\${signal.volRatio.toStringAsFixed(2)}x',signal.volRatio>=0.9?const Color(COLOR_GREEN):const Color(COLOR_YELLOW)),
+                    _i('EMA',signal.emaBullish?'Bull':'Bear',signal.emaBullish?const Color(COLOR_GREEN):const Color(COLOR_RED)),
+                    _i('MACD',signal.macdBull?'Bull':'Bear',signal.macdBull?const Color(COLOR_GREEN):const Color(COLOR_RED)),
+                  ]),
+                  if(signal.extended||signal.sectorWeak)...[const SizedBox(height:6),Wrap(spacing:6,children:[if(signal.extended)_w('\\u26a0\\ufe0f EXTENDED'),if(signal.sectorWeak)_w('\\u26a0\\ufe0f SECTOR WEAK')])],
+                  const SizedBox(height:8),const Divider(color:Color(0xFF222222),height:1),const SizedBox(height:8),
+                  Row(children:[_l('ENTRY','\\u20b9\\${signal.price.toStringAsFixed(2)}',Colors.white),_l('SL','\\u20b9\\${signal.stopLoss.toStringAsFixed(2)}',const Color(COLOR_RED)),_l('TARGET','\\u20b9\\${signal.target.toStringAsFixed(2)}',const Color(COLOR_GREEN))]),
+                ]));
+            }
+            Widget _i(String l,String v,Color c)=>Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:c.withValues(alpha:0.1),borderRadius:BorderRadius.circular(4)),child:Text('\\$l: \\$v',style:TextStyle(color:c,fontSize:10,fontWeight:FontWeight.bold)));
+            Widget _w(String t)=>Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withValues(alpha:0.1),borderRadius:BorderRadius.circular(4),border:Border.all(color:const Color(COLOR_YELLOW).withValues(alpha:0.3))),child:Text(t,style:const TextStyle(color:Color(COLOR_YELLOW),fontSize:10)));
+            Widget _l(String l,String v,Color c)=>Expanded(child:Column(children:[Text(l,style:const TextStyle(color:Colors.grey,fontSize:10,letterSpacing:1)),Text(v,style:TextStyle(color:c,fontSize:12,fontWeight:FontWeight.bold))]));
+          }
+          """)
+
+          # ── lib/screens/timer_scan_screen.dart ────────────────────────────
+          w('lib/screens/timer_scan_screen.dart', """import 'dart:async';
+          import 'package:flutter/material.dart';
+          import '../services/scan_service.dart';
+          import '../models/signal.dart';
+          import '../widgets/signal_card.dart';
+          import '../constants.dart';
+          class TimerScanScreen extends StatefulWidget {
+            const TimerScanScreen({super.key});
+            @override State<TimerScanScreen> createState()=>_S();
+          }
+          class _S extends State<TimerScanScreen> {
+            final _svc=ScanService();
+            bool _run=false,_rest=false;
+            int _scanN=0,_scanned=0,_total=88,_buys=0,_shorts=0,_restSecs=300;
+            String _cur='',_status='IDLE \u2014 PRESS START TO BEGIN';
+            List<StockSignal> _sigs=[];
+            StreamSubscription? _p,_c,_r,_s;
+            @override void initState(){super.initState();_listen();}
+            void _listen(){
+              _p=_svc.onProgress.listen((d){if(d==null||!mounted)return;setState((){_scanned=d['scanned']??0;_total=d['total']??88;_buys=d['buys']??0;_shorts=d['shorts']??0;_cur=d['currentSymbol']??'';_scanN=d['scanNum']??_scanN;_rest=false;_status='SCAN #\\$_scanN IN PROGRESS...';});});
+              _c=_svc.onScanComplete.listen((d){if(d==null||!mounted)return;final s=(d['signals']as List? ??[]).map((x)=>StockSignal.fromJson(Map<String,dynamic>.from(x))).toList();setState((){_sigs=s.where((x)=>!x.isAvoid).toList();});});
+              _r=_svc.onRestTick.listen((d){if(d==null||!mounted)return;setState((){_restSecs=d['secsLeft']??0;_rest=true;_status='RESTING \\${_restSecs}S BEFORE SCAN #\\${_scanN+1}';});});
+              _s=_svc.onStopped.listen((d){if(!mounted)return;setState((){_run=false;_rest=false;_status='IDLE \u2014 PRESS START TO BEGIN';});});
+            }
+            @override void dispose(){_p?.cancel();_c?.cancel();_r?.cancel();_s?.cancel();super.dispose();}
+            Future<void> _start() async{setState((){_run=true;_status='STARTING...';});await _svc.startScan();}
+            Future<void> _stop() async{await _svc.stopScan();setState((){_run=false;_rest=false;_status='IDLE \u2014 PRESS START TO BEGIN';});}
+            String get _timer{if(_rest){final m=_restSecs~/60;final s=_restSecs%60;return '\\${m.toString().padLeft(2,'0')}:\\${s.toString().padLeft(2,'0')}';}return '05:00';}
+            Color get _tc=>_rest?const Color(COLOR_YELLOW):_run?const Color(0xFF4499FF):Colors.grey.withValues(alpha:0.3);
+            @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
+              body:SingleChildScrollView(child:Column(children:[
+                Container(margin:const EdgeInsets.all(12),padding:const EdgeInsets.symmetric(vertical:30),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
+                  child:Column(children:[Text(_status,style:const TextStyle(color:Colors.grey,fontSize:12,letterSpacing:2)),const SizedBox(height:16),Text(_timer,style:TextStyle(color:_tc,fontSize:72,fontWeight:FontWeight.bold,fontFamily:'monospace',letterSpacing:4)),const SizedBox(height:8),Text(_run?'Scan #\\$_scanN | \\$_scanned stocks analysed':'Scan #0 | 0 stocks analysed',style:const TextStyle(color:Colors.grey,fontSize:12))])),
+                Padding(padding:const EdgeInsets.all(12),child:Row(children:[
+                  Expanded(child:ElevatedButton.icon(onPressed:_run?null:_start,icon:const Icon(Icons.play_arrow),label:const Text('START TIMER SCAN',style:TextStyle(fontWeight:FontWeight.bold)),style:ElevatedButton.styleFrom(backgroundColor:const Color(COLOR_GREEN),foregroundColor:Colors.black,padding:const EdgeInsets.symmetric(vertical:16),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(6))))),
+                  const SizedBox(width:8),
+                  Expanded(child:ElevatedButton.icon(onPressed:_run?_stop:null,icon:const Icon(Icons.stop),label:const Text('STOP',style:TextStyle(fontWeight:FontWeight.bold)),style:ElevatedButton.styleFrom(backgroundColor:const Color(COLOR_RED),foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(vertical:16),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(6))))),
+                ])),
+                if(_run&&!_rest) Container(margin:const EdgeInsets.symmetric(horizontal:12,vertical:4),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
+                  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('SCANNING IN PROGRESS',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:8),ClipRRect(borderRadius:BorderRadius.circular(4),child:LinearProgressIndicator(value:_total>0?_scanned/_total:0,backgroundColor:Colors.grey.withValues(alpha:0.2),valueColor:const AlwaysStoppedAnimation<Color>(Color(COLOR_GREEN)),minHeight:6)),const SizedBox(height:6),Text('\\$_scanned/\\$_total',style:const TextStyle(color:Colors.white,fontSize:13)),Text('Analysing: \\$_cur...',style:const TextStyle(color:Color(COLOR_YELLOW),fontSize:13))])),
+                if(_sigs.isNotEmpty) Container(margin:const EdgeInsets.symmetric(horizontal:12,vertical:4),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
+                  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('SCAN #\\$_scanN SUMMARY \u2014 V33',style:const TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(height:10),
+                    Row(children:[_box('BUY',_sigs.where((s)=>s.isBuy).length,const Color(COLOR_GREEN)),const SizedBox(width:8),_box('SHORT',_sigs.where((s)=>s.isShort).length,const Color(COLOR_RED)),const SizedBox(width:8),_box('TOTAL',_sigs.length,Colors.white)]),
+                    const SizedBox(height:12),..._sigs.take(5).map((s)=>SignalCard(signal:s))]),),
+                const SizedBox(height:20),
+              ])));
+            Widget _box(String l,int n,Color c)=>Expanded(child:Container(padding:const EdgeInsets.symmetric(vertical:12),decoration:BoxDecoration(color:c.withValues(alpha:0.1),borderRadius:BorderRadius.circular(6),border:Border.all(color:c.withValues(alpha:0.3))),child:Column(children:[Text(l,style:TextStyle(color:c,fontSize:11,letterSpacing:1)),Text('\\$n',style:TextStyle(color:c,fontSize:28,fontWeight:FontWeight.bold))])));
+          }
+          """)
+
+          # ── lib/screens/settings_screen.dart ──────────────────────────────
+          w('lib/screens/settings_screen.dart', """import 'package:flutter/material.dart';
+          import 'package:shared_preferences/shared_preferences.dart';
+          import '../constants.dart';
+          class SettingsScreen extends StatefulWidget {
+            const SettingsScreen({super.key});
+            @override State<SettingsScreen> createState()=>_S();
+          }
+          class _S extends State<SettingsScreen> {
+            final _cap=TextEditingController(text:'10591');
+            int _rest=300;String _mood='NEUTRAL';
+            @override void initState(){super.initState();_load();}
+            Future<void> _load() async{final p=await SharedPreferences.getInstance();setState((){_cap.text=(p.getDouble('capital')??10591.0).toStringAsFixed(0);_rest=p.getInt('rest_duration')??300;_mood=p.getString('market_mood')??'NEUTRAL';});}
+            Future<void> _save() async{final p=await SharedPreferences.getInstance();await p.setDouble('capital',double.tryParse(_cap.text)??10591.0);await p.setInt('rest_duration',_rest);await p.setString('market_mood',_mood);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('\\u2705 Settings saved'),backgroundColor:Color(COLOR_GREEN),duration:Duration(seconds:2)));}
+            @override void dispose(){_cap.dispose();super.dispose();}
+            @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
+              appBar:AppBar(title:const Text('SETTINGS'),actions:[TextButton(onPressed:_save,child:const Text('SAVE',style:TextStyle(color:Color(COLOR_GREEN),fontWeight:FontWeight.bold)))]),
+              body:SingleChildScrollView(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('\\U0001f4b0 TRADING CAPITAL',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
+                Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),child:Row(children:[const Text('\\u20b9 ',style:TextStyle(color:Color(COLOR_GREEN),fontSize:20)),Expanded(child:TextField(controller:_cap,keyboardType:TextInputType.number,style:const TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold),decoration:const InputDecoration(border:InputBorder.none)))])),
+                const SizedBox(height:16),
+                const Text('\\u2699\\ufe0f TIMER SETTINGS',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
+                Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
+                  child:Row(children:[const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Rest Duration',style:TextStyle(color:Colors.white,fontSize:14)),Text('Gap between scans',style:TextStyle(color:Colors.grey,fontSize:11))])),
+                    DropdownButton<int>(value:_rest,dropdownColor:const Color(COLOR_CARD),style:const TextStyle(color:Colors.white),underline:const SizedBox(),items:const[DropdownMenuItem(value:180,child:Text('3 min')),DropdownMenuItem(value:300,child:Text('5 min')),DropdownMenuItem(value:420,child:Text('7 min'))],onChanged:(v)=>setState(()=>_rest=v!))])),
+                const SizedBox(height:16),
+                const Text('\\U0001f4ca MARKET MOOD',style:TextStyle(color:Colors.grey,fontSize:11,letterSpacing:2)),const SizedBox(height:8),
+                Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(COLOR_CARD),borderRadius:BorderRadius.circular(8)),
+                  child:Column(children:['BULLISH','NEUTRAL','BEARISH'].map((m){final s=_mood==m;final c=m=='BULLISH'?const Color(COLOR_GREEN):m=='BEARISH'?const Color(COLOR_RED):const Color(COLOR_YELLOW);return ListTile(contentPadding:EdgeInsets.zero,title:Text(m,style:TextStyle(color:s?c:Colors.grey,fontWeight:s?FontWeight.bold:FontWeight.normal)),trailing:s?Icon(Icons.check_circle,color:c):null,onTap:()=>setState(()=>_mood=m));}).toList())),
+                const SizedBox(height:20),
+                Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(COLOR_YELLOW).withValues(alpha:0.1),borderRadius:BorderRadius.circular(8),border:Border.all(color:const Color(COLOR_YELLOW).withValues(alpha:0.3))),child:const Text('\\u26a0\\ufe0f PERSONAL USE ONLY \u2014 Not SEBI registered advice. Always use stop-loss.',style:TextStyle(color:Color(COLOR_YELLOW),fontSize:11))),
+              ])));
+          }
+          """)
+
+          # ── lib/screens/home_screen.dart ──────────────────────────────────
+          w('lib/screens/home_screen.dart', """import 'dart:async';
+          import 'package:flutter/material.dart';
+          import '../constants.dart';
+          import 'timer_scan_screen.dart';
+          import 'settings_screen.dart';
+          class HomeScreen extends StatefulWidget {
+            const HomeScreen({super.key});
+            @override State<HomeScreen> createState()=>_S();
+          }
+          class _S extends State<HomeScreen> {
+            int _idx=0;Timer? _t;DateTime _now=DateTime.now();
+            @override void initState(){super.initState();_t=Timer.periodic(const Duration(seconds:1),(_){if(mounted)setState(()=>_now=DateTime.now());});}
+            @override void dispose(){_t?.cancel();super.dispose();}
+            bool get _open{if(_now.weekday==DateTime.saturday||_now.weekday==DateTime.sunday)return false;final tot=_now.hour*60+_now.minute;return tot>=MARKET_OPEN_HOUR*60+MARKET_OPEN_MIN&&tot<MARKET_CLOSE_HOUR*60+MARKET_CLOSE_MIN;}
+            bool get _best{final tot=_now.hour*60+_now.minute;return tot>=BEST_ENTRY_HOUR*60+BEST_ENTRY_MIN&&tot<EXIT_WARNING_HOUR*60+EXIT_WARNING_MIN;}
+            String get _time=>'\\${_now.hour.toString().padLeft(2,'0')}:\\${_now.minute.toString().padLeft(2,'0')}:\\${_now.second.toString().padLeft(2,'0')}';
+            @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
+              body:SafeArea(child:Column(children:[
+                Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[
+                  RichText(text:const TextSpan(children:[TextSpan(text:'STOCK',style:TextStyle(color:Color(COLOR_GREEN),fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'SENSE',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'  V1.0',style:TextStyle(color:Colors.grey,fontSize:12))])),
+                  const Spacer(),
+                  Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:(_open?const Color(COLOR_GREEN):Colors.red).withValues(alpha:0.1),borderRadius:BorderRadius.circular(20),border:Border.all(color:(_open?const Color(COLOR_GREEN):Colors.red).withValues(alpha:0.5))),
+                    child:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:7,height:7,decoration:BoxDecoration(color:_open?const Color(COLOR_GREEN):Colors.red,shape:BoxShape.circle)),const SizedBox(width:5),Text(_open?'MARKET OPEN':'MARKET CLOSED',style:TextStyle(color:_open?const Color(COLOR_GREEN):Colors.red,fontSize:10,fontWeight:FontWeight.bold))]))])),
+                Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:6),color:const Color(COLOR_CARD),child:Row(children:[const Text('IST',style:TextStyle(color:Colors.grey,fontSize:10,letterSpacing:2)),const SizedBox(width:12),Text(_time,style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.bold,fontFamily:'monospace')),const Spacer(),if(_open&&_best)const Text('\\u2705 BEST ENTRY WINDOW',style:TextStyle(color:Color(COLOR_GREEN),fontSize:10,fontWeight:FontWeight.bold))])),
+                Container(height:2,decoration:const BoxDecoration(gradient:LinearGradient(colors:[Color(COLOR_GREEN),Color(0xFF004422)]))),
+                Expanded(child:IndexedStack(index:_idx,children:const[TimerScanScreen(),SettingsScreen()])),
+              ])),
+              bottomNavigationBar:BottomNavigationBar(currentIndex:_idx,onTap:(i)=>setState(()=>_idx=i),backgroundColor:const Color(COLOR_CARD),selectedItemColor:const Color(COLOR_GREEN),unselectedItemColor:Colors.grey,
+                items:const[BottomNavigationBarItem(icon:Icon(Icons.timer),label:'TIMER SCAN'),BottomNavigationBarItem(icon:Icon(Icons.settings),label:'SETTINGS')]));
+          }
+          """)
+
+          # ── lib/main.dart ─────────────────────────────────────────────────
+          w('lib/main.dart', """import 'package:flutter/material.dart';
+          import 'package:flutter/services.dart';
+          import 'services/notification_service.dart';
+          import 'services/scan_service.dart';
+          import 'screens/home_screen.dart';
+          import 'constants.dart';
+          void main() async {
+            WidgetsFlutterBinding.ensureInitialized();
+            await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+            SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor:Colors.transparent,statusBarIconBrightness:Brightness.light));
+            await NotificationService().init();
+            await ScanService().init();
+            runApp(const StockSenseApp());
+          }
+          class StockSenseApp extends StatelessWidget {
+            const StockSenseApp({super.key});
+            @override Widget build(BuildContext ctx)=>MaterialApp(
+              title:'StockSense',debugShowCheckedModeBanner:false,
+              theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:const Color(COLOR_BG),
+                colorScheme:const ColorScheme.dark(primary:Color(COLOR_GREEN),secondary:Color(COLOR_YELLOW),error:Color(COLOR_RED),surface:Color(COLOR_CARD)),
+                fontFamily:'monospace',appBarTheme:const AppBarTheme(backgroundColor:Color(COLOR_BG),elevation:0,titleTextStyle:TextStyle(color:Color(COLOR_GREEN),fontSize:18,fontWeight:FontWeight.bold,fontFamily:'monospace',letterSpacing:2))),
+              home:const HomeScreen());
+          }
+          """)
+
+          print("All files written successfully!")
+          PYEOF
 
       - name: Get Flutter packages
         run: flutter pub get
@@ -653,6 +637,6 @@ EOF
 
       - name: Build Summary
         run: |
-          echo "✅ StockSense APK built successfully!"
+          echo "StockSense APK built successfully!"
           ls -lh build/app/outputs/flutter-apk/app-release.apk
-          echo "📥 Download from Actions tab → StockSense-APK"
+          echo "Download from Actions tab - StockSense-APK"
