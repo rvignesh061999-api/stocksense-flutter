@@ -85,7 +85,7 @@ jobs:
 
           # ── android/build.gradle ─────────────────────────────────────────
           w('android/build.gradle', """buildscript {
-              ext.kotlin_version = '1.9.24'
+              ext.kotlin_version = '1.8.22'
               repositories { google(); mavenCentral() }
               dependencies {
                   classpath 'com.android.tools.build:gradle:7.4.2'
@@ -160,7 +160,7 @@ jobs:
           flutter { source '../..' }
           dependencies {
               coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
-              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24"
+              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
               implementation 'androidx.multidex:multidex:2.0.1'
           }
           """)
