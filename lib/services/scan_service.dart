@@ -16,7 +16,7 @@ void startCallback() {
 
 class StockSenseTaskHandler extends TaskHandler {
   @override
-  Future<void> onStart(DateTime timestamp) async {
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     _stop = false;
     _scanN = 0;
     await NotificationService().init();
@@ -54,9 +54,6 @@ class StockSenseTaskHandler extends TaskHandler {
       final buys = results.where((s) => s.isBuy).toList();
       final shorts = results.where((s) => s.isShort).toList();
 
-      final buyStr = buys.take(2).map((s) => '🟢 ' + s.symbol + ' ' + s.confidence.toString() + '%').join('  ');
-      final shortStr = shorts.take(2).map((s) => '🔴 ' + s.symbol + ' ' + s.confidence.toString() + '%').join('  ');
-
       await notif.showScanComplete(
         scanNum: _scanN,
         buys: buys.length,
@@ -73,12 +70,12 @@ class StockSenseTaskHandler extends TaskHandler {
         'signals': results.map((s) => {
           'symbol': s.symbol, 'signal': s.signal,
           'confidence': s.confidence, 'price': s.price,
-          'rsi': s.rsi, 'volRatio': s.volRatio
+          'rsi': s.rsi, 'volRatio': s.volRatio,
         }).toList(),
       });
 
       if (_stop) break;
-      await _rest(notif, rest, _scanN, [buyStr, shortStr]);
+      await _rest(notif, rest, _scanN);
     }
     await notif.clearAll();
   }
@@ -110,13 +107,15 @@ class StockSenseTaskHandler extends TaskHandler {
     return results;
   }
 
-  Future<void> _rest(NotificationService notif, int total, int scanN, List<String> sigs) async {
+  Future<void> _rest(NotificationService notif, int total, int scanN) async {
     int left = total;
     while (left > 0 && !_stop) {
       await Future.delayed(const Duration(seconds: 1));
       left--;
       if (left % 10 == 0 || left <= 5) {
-        await notif.showRestCountdown(secondsLeft: left, scanNum: scanN, topSignals: sigs);
+        await notif.showRestCountdown(
+          secondsLeft: left, scanNum: scanN, topSignals: [],
+        );
         FlutterForegroundTask.sendDataToMain({
           'event': 'restTick', 'secsLeft': left, 'scanNum': scanN,
         });
@@ -135,7 +134,6 @@ class ScanService {
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'stocksense_scan',
         channelName: 'StockSense Scan',
-        channelDescription: 'StockSense scanning service',
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
       ),

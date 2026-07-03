@@ -23,7 +23,7 @@ class _S extends State<TimerScanScreen> {
   void initState() {
     super.initState();
     FlutterForegroundTask.initCommunicationPort();
-    _sub = FlutterForegroundTask.receiveDataFromTask.listen(_onData);
+    _sub = FlutterForegroundTask.receivePort?.listen(_onData);
   }
 
   void _onData(Object data) {
@@ -80,7 +80,9 @@ class _S extends State<TimerScanScreen> {
     return '05:00';
   }
 
-  Color get _tc => _rest ? const Color(COLOR_YELLOW) : _run ? const Color(0xFF4499FF) : Colors.grey.withOpacity(0.3);
+  Color get _tc => _rest
+      ? const Color(COLOR_YELLOW)
+      : _run ? const Color(0xFF4499FF) : Colors.grey.withOpacity(0.3);
 
   @override
   Widget build(BuildContext ctx) => Scaffold(
@@ -104,14 +106,22 @@ class _S extends State<TimerScanScreen> {
           onPressed: _run ? null : _start,
           icon: const Icon(Icons.play_arrow),
           label: const Text('START TIMER SCAN', style: TextStyle(fontWeight: FontWeight.bold)),
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(COLOR_GREEN), foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(COLOR_GREEN), foregroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          ),
         )),
         const SizedBox(width: 8),
         Expanded(child: ElevatedButton.icon(
           onPressed: _run ? _stop : null,
           icon: const Icon(Icons.stop),
           label: const Text('STOP', style: TextStyle(fontWeight: FontWeight.bold)),
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(COLOR_RED), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(COLOR_RED), foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          ),
         )),
       ])),
       if (_run && !_rest)
@@ -158,7 +168,11 @@ class _S extends State<TimerScanScreen> {
 
   Widget _box(String l, int n, Color c) => Expanded(child: Container(
     padding: const EdgeInsets.symmetric(vertical: 12),
-    decoration: BoxDecoration(color: c.withOpacity(0.1), borderRadius: BorderRadius.circular(6), border: Border.all(color: c.withOpacity(0.3))),
+    decoration: BoxDecoration(
+      color: c.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: c.withOpacity(0.3)),
+    ),
     child: Column(children: [
       Text(l, style: TextStyle(color: c, fontSize: 11, letterSpacing: 1)),
       Text('$n', style: TextStyle(color: c, fontSize: 28, fontWeight: FontWeight.bold)),

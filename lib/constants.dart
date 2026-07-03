@@ -1,4 +1,5 @@
-const String APP_VERSION = 'V1.0.0';
+const String APP_VERSION = 'V1.0.1';
+const String BUILD_DATE = '02 Jul 2026 10:15';
 const String SERVER_URL = 'https://stock-sense-server--rvignesh061999.replit.app/api';
 const List<String> ALL_STOCKS = [
   'HDFCBANK','ICICIBANK','KOTAKBANK','AXISBANK','SBIN','BANKBARODA','PNB','INDUSINDBK','YESBANK','FEDERALBNK',

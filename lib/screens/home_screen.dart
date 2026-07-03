@@ -17,7 +17,7 @@ class _S extends State<HomeScreen> {
   @override Widget build(BuildContext ctx)=>Scaffold(backgroundColor:const Color(COLOR_BG),
     body:SafeArea(child:Column(children:[
       Container(padding:const EdgeInsets.symmetric(horizontal:16,vertical:10),child:Row(children:[
-        RichText(text:const TextSpan(children:[TextSpan(text:'STOCK',style:TextStyle(color:Color(COLOR_GREEN),fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'SENSE',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'  V1.0',style:TextStyle(color:Colors.grey,fontSize:12))])),
+        RichText(text:const TextSpan(children:[TextSpan(text:'STOCK',style:TextStyle(color:Color(COLOR_GREEN),fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'SENSE',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold,letterSpacing:2)),TextSpan(text:'  $APP_VERSION',style:TextStyle(color:Colors.grey,fontSize:12)),TextSpan(text:'  $BUILD_DATE',style:TextStyle(color:Color(0xFF333333),fontSize:9))])),
         const Spacer(),
         Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:(_open?const Color(COLOR_GREEN):Colors.red).withOpacity(0.1),borderRadius:BorderRadius.circular(20),border:Border.all(color:(_open?const Color(COLOR_GREEN):Colors.red).withOpacity(0.5))),
           child:Row(mainAxisSize:MainAxisSize.min,children:[Container(width:7,height:7,decoration:BoxDecoration(color:_open?const Color(COLOR_GREEN):Colors.red,shape:BoxShape.circle)),const SizedBox(width:5),Text(_open?'MARKET OPEN':'MARKET CLOSED',style:TextStyle(color:_open?const Color(COLOR_GREEN):Colors.red,fontSize:10,fontWeight:FontWeight.bold))]))])),
