@@ -6,15 +6,27 @@ import 'notification_service.dart';
 import '../constants.dart';
 import '../models/signal.dart';
 
-bool _stop = false;
-int _scanN = 0;
-
 @pragma('vm:entry-point')
 void startCallback() {
   FlutterForegroundTask.setTaskHandler(StockSenseTaskHandler());
 }
 
+// Fix #16 (corrected) — _stop/_scanN are instance fields of the TaskHandler,
+// which lives entirely inside the background isolate spawned by
+// flutter_foreground_task. They were previously top-level "globals," which
+// looked shared with ScanService below but weren't: Dart isolates don't
+// share memory, so ScanService's own assignments to a same-named global
+// were actually silent no-ops on a completely separate copy. The real
+// stop signal has always been FlutterForegroundTask.stopService()
+// triggering onDestroy() here, inside this isolate — that part was
+// already correct; only the misleading appearance of shared state is
+// fixed by this encapsulation.
 class StockSenseTaskHandler extends TaskHandler {
+  bool _stop = false;
+  int _scanN = 0;
+  int _lastScanFailures = 0;
+  String? _lastScanErrorSample;
+
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     _stop = false;
@@ -58,8 +70,8 @@ class StockSenseTaskHandler extends TaskHandler {
         scanNum: _scanN,
         buys: buys.length,
         shorts: shorts.length,
-        topBuys: buys.take(3).map((s) => s.symbol + ' ' + s.confidence.toString() + '%').toList(),
-        topShorts: shorts.take(3).map((s) => s.symbol + ' ' + s.confidence.toString() + '%').toList(),
+        topBuys: buys.take(3).map((s) => '${s.symbol} ${s.confidence}%').toList(),
+        topShorts: shorts.take(3).map((s) => '${s.symbol} ${s.confidence}%').toList(),
       );
 
       FlutterForegroundTask.sendDataToMain({
@@ -67,10 +79,22 @@ class StockSenseTaskHandler extends TaskHandler {
         'scanNum': _scanN,
         'buys': buys.length,
         'shorts': shorts.length,
+        'failures': _lastScanFailures,
+        'lastError': _lastScanErrorSample,
+        // Fix #5 — ALL 12 fields forwarded
         'signals': results.map((s) => {
-          'symbol': s.symbol, 'signal': s.signal,
-          'confidence': s.confidence, 'price': s.price,
-          'rsi': s.rsi, 'volRatio': s.volRatio,
+          'symbol': s.symbol,
+          'signal': s.signal,
+          'confidence': s.confidence,
+          'price': s.price,
+          'rsi': s.rsi,
+          'volRatio': s.volRatio,
+          'candle': s.candle,         // Fix #5
+          'emaBullish': s.emaBullish, // Fix #5
+          'aboveVwap': s.aboveVwap,   // Fix #5
+          'macdBull': s.macdBull,     // Fix #5
+          'extended': s.extended,     // Fix #5
+          'sectorWeak': s.sectorWeak, // Fix #5
         }).toList(),
       });
 
@@ -80,9 +104,11 @@ class StockSenseTaskHandler extends TaskHandler {
     await notif.clearAll();
   }
 
-  Future<List<StockSignal>> _scan(NotificationService notif, double capital, int scanN) async {
+  Future<List<StockSignal>> _scan(
+      NotificationService notif, double capital, int scanN) async {
     final results = <StockSignal>[];
-    int buys = 0, shorts = 0;
+    int buys = 0, shorts = 0, failures = 0;
+    String? lastFailureSymbol;
     for (int i = 0; i < ALL_STOCKS.length; i++) {
       if (_stop) break;
       final sig = await ApiService().scanStock(ALL_STOCKS[i], capital: capital);
@@ -90,20 +116,34 @@ class StockSenseTaskHandler extends TaskHandler {
         results.add(sig);
         if (sig.isBuy) buys++;
         if (sig.isShort) shorts++;
+      } else {
+        failures++;
+        lastFailureSymbol = ALL_STOCKS[i];
       }
       if (i == 0 || i % 5 == 0 || i == ALL_STOCKS.length - 1) {
         await notif.showScanProgress(
-          scanned: i + 1, total: ALL_STOCKS.length,
-          buys: buys, shorts: shorts, scanNum: scanN,
+          scanned: i + 1,
+          total: ALL_STOCKS.length, // Fix #7 — use actual list length
+          buys: buys,
+          shorts: shorts,
+          scanNum: scanN,
         );
         FlutterForegroundTask.sendDataToMain({
           'event': 'scanProgress',
-          'scanned': i + 1, 'total': ALL_STOCKS.length,
-          'buys': buys, 'shorts': shorts,
-          'currentSymbol': ALL_STOCKS[i], 'scanNum': scanN,
+          'scanned': i + 1,
+          'total': ALL_STOCKS.length, // Fix #7
+          'buys': buys,
+          'shorts': shorts,
+          'currentSymbol': ALL_STOCKS[i],
+          'scanNum': scanN,
+          'failures': failures,
+          'lastError': failures > 0 ? ApiService().lastError : null,
+          'lastFailureSymbol': lastFailureSymbol,
         });
       }
     }
+    _lastScanFailures = failures;
+    _lastScanErrorSample = failures > 0 ? ApiService().lastError : null;
     return results;
   }
 
@@ -114,8 +154,7 @@ class StockSenseTaskHandler extends TaskHandler {
       left--;
       if (left % 10 == 0 || left <= 5) {
         await notif.showRestCountdown(
-          secondsLeft: left, scanNum: scanN, topSignals: [],
-        );
+            secondsLeft: left, scanNum: scanN, topSignals: []);
         FlutterForegroundTask.sendDataToMain({
           'event': 'restTick', 'secsLeft': left, 'scanNum': scanN,
         });
@@ -150,21 +189,25 @@ class ScanService {
   }
 
   Future<void> startScan() async {
-    _stop = false;
+    // _stop=false no longer needs setting here — onStart() in the
+    // background isolate's TaskHandler resets its own instance field
+    // every time the service (re)starts.
     if (await FlutterForegroundTask.isRunningService) {
       await FlutterForegroundTask.restartService();
     } else {
       await FlutterForegroundTask.startService(
         serviceId: 888,
         notificationTitle: 'StockSense Scanning',
-        notificationText: 'Scanning stocks...',
+        notificationText: 'Scanning ${ALL_STOCKS.length} stocks...',
         callback: startCallback,
       );
     }
   }
 
   Future<void> stopScan() async {
-    _stop = true;
+    // stopService() triggers onDestroy() inside the background isolate,
+    // which sets that isolate's own _stop field to true — that's the
+    // real stop signal; there's nothing else to do from this isolate.
     await FlutterForegroundTask.stopService();
   }
 
