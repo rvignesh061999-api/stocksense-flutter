@@ -1,8 +1,8 @@
 name: Build StockSense APK
 
 on:
-  push:
-    branches: [ main ]
+  # 2026-07-07: push trigger removed — builds now run manually only,
+  # via Actions tab -> Run workflow. Avoids a build firing on every commit.
   workflow_dispatch:
 
 jobs:
@@ -33,6 +33,9 @@ jobs:
           cat pubspec.yaml
           echo "--- Gradle wrapper ---"
           grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
+          # 2026-07-07: AGP/Kotlin moved from android/build.gradle to
+          # android/settings.gradle (fixed the BaseVariant classloader
+          # conflict) — this verify step now greps the correct file.
           echo "--- AGP/Kotlin (now declared in settings.gradle) ---"
           grep -E "com.android.application|kotlin.android" android/settings.gradle
           echo "--- SDK levels ---"
