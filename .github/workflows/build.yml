@@ -33,8 +33,8 @@ jobs:
           cat pubspec.yaml
           echo "--- Gradle wrapper ---"
           grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
-          echo "--- AGP/Kotlin ---"
-          grep -E "gradle:|kotlin_version" android/build.gradle
+          echo "--- AGP/Kotlin (now declared in settings.gradle) ---"
+          grep -E "com.android.application|kotlin.android" android/settings.gradle
           echo "--- SDK levels ---"
           grep -E "compileSdk|targetSdk|minSdk" android/app/build.gradle
           echo "--- Flutter ---"
