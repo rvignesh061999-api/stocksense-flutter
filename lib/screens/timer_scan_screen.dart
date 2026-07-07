@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import '../services/scan_service.dart';
+import '../services/notification_service.dart';
 import '../models/signal.dart';
 import '../widgets/signal_card.dart';
 import '../constants.dart';
@@ -14,8 +15,10 @@ class TimerScanScreen extends StatefulWidget {
 class _S extends State<TimerScanScreen> {
   final _svc = ScanService();
   bool _run = false, _rest = false;
-  int _scanN = 0, _scanned = 0, _total = 88, _buys = 0, _shorts = 0, _restSecs = 300;
-  String _cur = '', _status = 'IDLE — PRESS START TO BEGIN';
+  int _scanN = 0, _scanned = 0, _total = ALL_STOCKS.length, // Fix #7
+      _buys = 0, _shorts = 0, _restSecs = 300, _failures = 0;
+  String _cur = '', _status = 'IDLE \u2014 PRESS START TO BEGIN';
+  String? _lastError;
   List<StockSignal> _sigs = [];
   StreamSubscription? _sub;
 
@@ -23,21 +26,29 @@ class _S extends State<TimerScanScreen> {
   void initState() {
     super.initState();
     FlutterForegroundTask.initCommunicationPort();
+    // Fix — Build Failure 2: dynamic instead of Object
     _sub = FlutterForegroundTask.receivePort?.listen(_onData);
+    // Fix #6 — request permission
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().requestPermission(context);
+    });
   }
 
-  void _onData(Object data) {
-    if (!mounted) return;
+  // Fix — Build Failure 2: dynamic parameter type
+  void _onData(dynamic data) {
+    if (!mounted || data == null) return;
     final d = Map<String, dynamic>.from(data as Map);
     final event = d['event'] as String?;
     if (event == 'scanProgress') {
       setState(() {
         _scanned = d['scanned'] ?? 0;
-        _total = d['total'] ?? 88;
+        _total = d['total'] ?? ALL_STOCKS.length;
         _buys = d['buys'] ?? 0;
         _shorts = d['shorts'] ?? 0;
         _cur = d['currentSymbol'] ?? '';
         _scanN = d['scanNum'] ?? _scanN;
+        _failures = d['failures'] ?? 0; // Fix #8/#17 — surface API failures
+        _lastError = d['lastError'];
         _rest = false;
         _status = 'SCAN #$_scanN IN PROGRESS...';
       });
@@ -45,7 +56,11 @@ class _S extends State<TimerScanScreen> {
       final s = (d['signals'] as List? ?? [])
           .map((x) => StockSignal.fromJson(Map<String, dynamic>.from(x)))
           .toList();
-      setState(() { _sigs = s.where((x) => !x.isAvoid).toList(); });
+      setState(() {
+        _sigs = s.where((x) => !x.isAvoid).toList();
+        _failures = d['failures'] ?? 0; // Fix #8/#17
+        _lastError = d['lastError'];
+      });
     } else if (event == 'restTick') {
       setState(() {
         _restSecs = d['secsLeft'] ?? 0;
@@ -68,14 +83,17 @@ class _S extends State<TimerScanScreen> {
 
   Future<void> _stop() async {
     await _svc.stopScan();
-    setState(() { _run = false; _rest = false; _status = 'IDLE — PRESS START TO BEGIN'; });
+    setState(() {
+      _run = false; _rest = false;
+      _status = 'IDLE \u2014 PRESS START TO BEGIN';
+    });
   }
 
   String get _timer {
     if (_rest) {
       final m = _restSecs ~/ 60;
       final s = _restSecs % 60;
-      return '${m.toString().padLeft(2,"0")}:${s.toString().padLeft(2,"0")}';
+      return '${m.toString().padLeft(2, "0")}:${s.toString().padLeft(2, "0")}';
     }
     return '05:00';
   }
@@ -91,13 +109,18 @@ class _S extends State<TimerScanScreen> {
       Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.symmetric(vertical: 30),
-        decoration: BoxDecoration(color: const Color(COLOR_CARD), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: const Color(COLOR_CARD),
+            borderRadius: BorderRadius.circular(8)),
         child: Column(children: [
-          Text(_status, style: const TextStyle(color: Colors.grey, fontSize: 12, letterSpacing: 2)),
+          Text(_status, style: const TextStyle(color: Colors.grey,
+              fontSize: 12, letterSpacing: 2)),
           const SizedBox(height: 16),
-          Text(_timer, style: TextStyle(color: _tc, fontSize: 72, fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 4)),
+          Text(_timer, style: TextStyle(color: _tc, fontSize: 72,
+              fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 4)),
           const SizedBox(height: 8),
-          Text(_run ? 'Scan #$_scanN | $_scanned stocks analysed' : 'Scan #0 | 0 stocks analysed',
+          Text(_run
+              ? 'Scan #$_scanN | $_scanned/${ALL_STOCKS.length} stocks analysed'
+              : 'Scan #0 | 0 stocks analysed',
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
         ]),
       ),
@@ -105,9 +128,11 @@ class _S extends State<TimerScanScreen> {
         Expanded(child: ElevatedButton.icon(
           onPressed: _run ? null : _start,
           icon: const Icon(Icons.play_arrow),
-          label: const Text('START TIMER SCAN', style: TextStyle(fontWeight: FontWeight.bold)),
+          label: const Text('START TIMER SCAN',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(COLOR_GREEN), foregroundColor: Colors.black,
+            backgroundColor: const Color(COLOR_GREEN),
+            foregroundColor: Colors.black,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
           ),
@@ -118,38 +143,72 @@ class _S extends State<TimerScanScreen> {
           icon: const Icon(Icons.stop),
           label: const Text('STOP', style: TextStyle(fontWeight: FontWeight.bold)),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(COLOR_RED), foregroundColor: Colors.white,
+            backgroundColor: const Color(COLOR_RED),
+            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
           ),
         )),
       ])),
+      // Fix #8/#17 — distinguish "no signals found" from "server/network
+      // issue" instead of silently showing zero results either way.
+      if (_failures > 0)
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(COLOR_RED).withOpacity(0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(COLOR_RED).withOpacity(0.4)),
+          ),
+          child: Row(children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(COLOR_RED), size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('$_failures request(s) failed this scan',
+                    style: const TextStyle(color: Color(COLOR_RED), fontWeight: FontWeight.bold, fontSize: 13)),
+                if (_lastError != null)
+                  Text(_lastError!,
+                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+              ]),
+            ),
+          ]),
+        ),
       if (_run && !_rest)
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: const Color(COLOR_CARD), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: const Color(COLOR_CARD),
+              borderRadius: BorderRadius.circular(8)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('SCANNING IN PROGRESS', style: TextStyle(color: Colors.grey, fontSize: 10, letterSpacing: 2)),
+            const Text('SCANNING IN PROGRESS',
+                style: TextStyle(color: Colors.grey, fontSize: 10, letterSpacing: 2)),
             const SizedBox(height: 8),
-            ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(
-              value: _total > 0 ? _scanned / _total : 0,
-              backgroundColor: Colors.grey.withOpacity(0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(COLOR_GREEN)),
-              minHeight: 6,
-            )),
+            ClipRRect(borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: _total > 0 ? _scanned / _total : 0,
+                  backgroundColor: Colors.grey.withOpacity(0.2),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(COLOR_GREEN)),
+                  minHeight: 6,
+                )),
             const SizedBox(height: 6),
-            Text('$_scanned/$_total', style: const TextStyle(color: Colors.white, fontSize: 13)),
-            Text('Analysing: $_cur...', style: const TextStyle(color: Color(COLOR_YELLOW), fontSize: 13)),
+            Text('$_scanned/$_total',
+                style: const TextStyle(color: Colors.white, fontSize: 13)),
+            Text('Analysing: $_cur...',
+                style: const TextStyle(color: Color(COLOR_YELLOW), fontSize: 13)),
           ]),
         ),
       if (_sigs.isNotEmpty)
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: const Color(COLOR_CARD), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: const Color(COLOR_CARD),
+              borderRadius: BorderRadius.circular(8)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('SCAN #$_scanN SUMMARY', style: const TextStyle(color: Colors.grey, fontSize: 10, letterSpacing: 2)),
+            Text('SCAN #$_scanN SUMMARY',
+                style: const TextStyle(color: Colors.grey, fontSize: 10, letterSpacing: 2)),
             const SizedBox(height: 10),
             Row(children: [
               _box('BUY', _sigs.where((s) => s.isBuy).length, const Color(COLOR_GREEN)),
