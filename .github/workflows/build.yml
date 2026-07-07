@@ -20,10 +20,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter 3.22.0
+      - name: Setup Flutter 3.44.4
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.44.4'
           channel: 'stable'
 
       - name: Verify build config
