@@ -52,7 +52,21 @@ jobs:
         run: flutter pub get
 
       - name: Build Release APK
-        run: flutter build apk --release --verbose
+        run: flutter build apk --release --verbose || true
+
+      - name: Locate actual APK (works around a known flutter_tools bug — flutter/flutter#175992)
+        run: |
+          echo "==== Searching entire build tree for any .apk ===="
+          find . -name "*.apk" 2>/dev/null
+          APK_PATH=$(find . -iname "app-release.apk" 2>/dev/null | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No app-release.apk found anywhere — the build genuinely failed."
+            exit 1
+          fi
+          echo "Found real APK at: $APK_PATH"
+          mkdir -p build/app/outputs/flutter-apk
+          cp "$APK_PATH" build/app/outputs/flutter-apk/app-release.apk
+          echo "Copied to expected location for the upload step."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -65,4 +79,4 @@ jobs:
         run: |
           echo "==== BUILD SUCCESS ===="
           ls -lh build/app/outputs/flutter-apk/app-release.apk
-          echo "Download: Actions tab → StockSense-APK"
+          echo "Download: Actions tab -> StockSense-APK"
