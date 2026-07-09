@@ -25,9 +25,18 @@ class _S extends State<TimerScanScreen> {
   @override
   void initState() {
     super.initState();
-    FlutterForegroundTask.initCommunicationPort();
-    // Fix — Build Failure 2: dynamic instead of Object
-    _sub = FlutterForegroundTask.receivePort?.listen(_onData);
+    // 2026-07-08: known flutter_foreground_task quirk — if the background
+    // service survived an app restart, its receivePort may already have a
+    // listener attached, throwing "Bad state: Stream has already been
+    // listened to." Don't let this crash the whole screen — just skip
+    // live background-event updates for this session; the scan/timer
+    // service itself is unaffected. Same fix applied on ClaudeLink.
+    try {
+      FlutterForegroundTask.initCommunicationPort();
+      _sub = FlutterForegroundTask.receivePort?.listen(_onData);
+    } catch (e, st) {
+      debugPrint('receivePort listen failed (non-fatal): $e\n$st');
+    }
     // Fix #6 — request permission
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService().requestPermission(context);
