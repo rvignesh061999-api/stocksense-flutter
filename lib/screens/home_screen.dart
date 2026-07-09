@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import 'timer_scan_screen.dart';
+import 'timer_log_screen.dart';
+import 'admin_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -93,7 +95,7 @@ class _S extends State<HomeScreen> {
               fontWeight: FontWeight.bold, fontFamily: 'monospace')),
           const Spacer(),
           if (_open && _best)
-            const Text('✅ BEST ENTRY WINDOW',
+            const Text('\u2705 BEST ENTRY WINDOW',
                 style: TextStyle(color: Color(COLOR_GREEN), fontSize: 10,
                     fontWeight: FontWeight.bold)),
         ]),
@@ -101,7 +103,7 @@ class _S extends State<HomeScreen> {
       Container(height: 2, decoration: const BoxDecoration(
           gradient: LinearGradient(colors: [Color(COLOR_GREEN), Color(0xFF004422)]))),
       Expanded(child: IndexedStack(index: _idx,
-          children: const [TimerScanScreen(), SettingsScreen()])),
+          children: const [TimerScanScreen(), TimerLogScreen(), AdminScreen(), SettingsScreen()])),
     ])),
     bottomNavigationBar: BottomNavigationBar(
       currentIndex: _idx,
@@ -109,8 +111,13 @@ class _S extends State<HomeScreen> {
       backgroundColor: const Color(COLOR_CARD),
       selectedItemColor: const Color(COLOR_GREEN),
       unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+      selectedFontSize: 9,
+      unselectedFontSize: 9,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.timer), label: 'TIMER SCAN'),
+        BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'TIMER LOG'),
+        BottomNavigationBarItem(icon: Icon(Icons.build_circle_outlined), label: 'ADMIN'),
         BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'SETTINGS'),
       ],
     ),
