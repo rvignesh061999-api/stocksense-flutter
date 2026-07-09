@@ -3,8 +3,10 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 import 'notification_service.dart';
+import 'timer_log_service.dart';
 import '../constants.dart';
 import '../models/signal.dart';
+import '../models/timer_log_entry.dart';
 
 @pragma('vm:entry-point')
 void startCallback() {
@@ -65,6 +67,19 @@ class StockSenseTaskHandler extends TaskHandler {
 
       final buys = results.where((s) => s.isBuy).toList();
       final shorts = results.where((s) => s.isShort).toList();
+
+      await TimerLogService().addEntry(TimerLogEntry(
+        time: DateTime.now(),
+        scanNum: _scanN,
+        scanned: results.length,
+        total: ALL_STOCKS.length,
+        buys: buys.length,
+        shorts: shorts.length,
+        failures: _lastScanFailures,
+        lastError: _lastScanErrorSample,
+        topBuys: buys.take(3).map((s) => '${s.symbol} ${s.confidence}%').toList(),
+        topShorts: shorts.take(3).map((s) => '${s.symbol} ${s.confidence}%').toList(),
+      ));
 
       await notif.showScanComplete(
         scanNum: _scanN,
