@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import '../services/scan_service.dart';
 import '../services/notification_service.dart';
+import '../services/timer_log_service.dart';
 import '../models/signal.dart';
 import '../widgets/signal_card.dart';
 import '../constants.dart';
@@ -22,25 +23,80 @@ class _S extends State<TimerScanScreen> {
   List<StockSignal> _sigs = [];
   StreamSubscription? _sub;
 
+  Timer? _fallbackPoll;
+  int _lastKnownLogCount = -1;
+
   @override
   void initState() {
     super.initState();
-    // 2026-07-08: known flutter_foreground_task quirk — if the background
-    // service survived an app restart, its receivePort may already have a
-    // listener attached, throwing "Bad state: Stream has already been
-    // listened to." Don't let this crash the whole screen — just skip
-    // live background-event updates for this session; the scan/timer
-    // service itself is unaffected. Same fix applied on ClaudeLink.
-    try {
-      FlutterForegroundTask.initCommunicationPort();
-      _sub = FlutterForegroundTask.receivePort?.listen(_onData);
-    } catch (e, st) {
-      debugPrint('receivePort listen failed (non-fatal): $e\n$st');
-    }
+    _connectPort();
     // Fix #6 — request permission
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService().requestPermission(context);
     });
+    // 2026-07-08: safety net — even if the live receivePort stream never
+    // connects, poll the persisted timer log every 5s so the screen still
+    // reflects real progress instead of staying frozen with no explanation.
+    _fallbackPoll = Timer.periodic(const Duration(seconds: 5), (_) => _pollFallback());
+  }
+
+  Future<void> _connectPort({bool isRetry = false}) async {
+    // 2026-07-08: known flutter_foreground_task quirk — if the background
+    // service survived an app restart, its receivePort may already have a
+    // listener attached, throwing "Bad state: Stream has already been
+    // listened to." Previously this was just caught and given up on
+    // silently, leaving the screen permanently frozen with no live updates
+    // even though the background scan kept running. Now: attempt a real
+    // recovery by force-restarting the service to get a fresh port, then
+    // retry listening once.
+    try {
+      FlutterForegroundTask.initCommunicationPort();
+      _sub = FlutterForegroundTask.receivePort?.listen(_onData);
+    } catch (e, st) {
+      debugPrint('receivePort listen failed: $e\n$st');
+      if (!isRetry) {
+        try {
+          await FlutterForegroundTask.restartService();
+          await Future.delayed(const Duration(milliseconds: 800));
+          if (mounted) await _connectPort(isRetry: true);
+        } catch (e2, st2) {
+          debugPrint('receivePort recovery failed: $e2\n$st2');
+        }
+      }
+    }
+  }
+
+  int _pollRunCount = 0;
+  String _pollDebug = 'not started yet';
+
+  Future<void> _pollFallback() async {
+    if (!mounted) return;
+    _pollRunCount++;
+    final now = TimeOfDay.now().format(context);
+    try {
+      final entries = await TimerLogService().loadAll();
+      final changed = entries.length != _lastKnownLogCount;
+      _lastKnownLogCount = entries.length;
+      if (mounted) {
+        setState(() {
+          _pollDebug = 'poll #$_pollRunCount @ $now \u2014 ${entries.length} entries in storage'
+              '${changed ? " (NEW)" : ""}';
+        });
+      }
+      if (entries.isNotEmpty && changed && mounted) {
+        final latest = entries.last;
+        setState(() {
+          _scanN = latest.scanNum;
+          _buys = latest.buys;
+          _shorts = latest.shorts;
+          _failures = latest.failures;
+          _lastError = latest.lastError;
+          _status = 'SCAN #$_scanN COMPLETE (via fallback poll)';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _pollDebug = 'poll #$_pollRunCount @ $now \u2014 ERROR: $e');
+    }
   }
 
   // Fix — Build Failure 2: dynamic parameter type
@@ -90,6 +146,7 @@ class _S extends State<TimerScanScreen> {
   @override
   void dispose() {
     _sub?.cancel();
+    _fallbackPoll?.cancel();
     super.dispose();
   }
 
@@ -139,6 +196,9 @@ class _S extends State<TimerScanScreen> {
               ? 'Scan #$_scanN | $_scanned/${ALL_STOCKS.length} stocks analysed'
               : 'Scan #0 | 0 stocks analysed',
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 8),
+          Text(_pollDebug,
+              style: const TextStyle(color: Color(COLOR_BLUE), fontSize: 9)),
         ]),
       ),
       Padding(padding: const EdgeInsets.all(12), child: Row(children: [
