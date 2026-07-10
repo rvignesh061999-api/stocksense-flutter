@@ -30,3 +30,11 @@ const int COLOR_BG=0xFF07080A,COLOR_CARD=0xFF0D0F12,COLOR_CARD2=0xFF131618;
 const int COLOR_BORDER=0xFF1F2228,COLOR_BORDER2=0xFF2A2F38;
 const int COLOR_TEXT=0xFFE8EAF0,COLOR_MUTED=0xFF525870;
 const int NOTIF_SCAN_PROGRESS=1,NOTIF_SCAN_COMPLETE=2,NOTIF_REST_TIMER=3;
+
+// 2026-07-08: baked in at build time via --dart-define (see build.yml).
+// Lets the app itself show exactly which build/commit produced it, so you
+// can confirm on-screen whether a fresh upload actually deployed instead
+// of guessing.
+const String BUILD_TIME = String.fromEnvironment('BUILD_TIME', defaultValue: 'DEV BUILD (not from CI)');
+const String BUILD_NUMBER = String.fromEnvironment('BUILD_NUMBER', defaultValue: '0');
+const String BUILD_COMMIT = String.fromEnvironment('BUILD_COMMIT', defaultValue: 'local');
