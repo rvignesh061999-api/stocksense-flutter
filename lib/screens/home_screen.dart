@@ -55,21 +55,21 @@ class _S extends State<HomeScreen> {
     body: SafeArea(child: Column(children: [
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(children: [
-          RichText(text: const TextSpan(children: [
-            TextSpan(text: 'STOCK', style: TextStyle(color: Color(COLOR_GREEN),
-                fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2)),
-            TextSpan(text: 'SENSE', style: TextStyle(color: Colors.white,
-                fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2)),
-            TextSpan(text: '  V1.0', style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ])),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: (_open ? const Color(COLOR_GREEN) : Colors.red).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            RichText(text: const TextSpan(children: [
+              TextSpan(text: 'STOCK', style: TextStyle(color: Color(COLOR_GREEN),
+                  fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              TextSpan(text: 'SENSE', style: TextStyle(color: Colors.white,
+                  fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2)),
+            ])),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: (_open ? const Color(COLOR_GREEN) : Colors.red).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
                   color: (_open ? const Color(COLOR_GREEN) : Colors.red).withOpacity(0.5)),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -82,6 +82,12 @@ class _S extends State<HomeScreen> {
                       color: _open ? const Color(COLOR_GREEN) : Colors.red,
                       fontSize: 10, fontWeight: FontWeight.bold)),
             ]),
+          ),
+        ]),
+          const SizedBox(height: 4),
+          Text(
+            'Build #$BUILD_NUMBER \u2022 ${BUILD_COMMIT.length >= 7 ? BUILD_COMMIT.substring(0, 7) : BUILD_COMMIT} \u2022 $BUILD_TIME',
+            style: const TextStyle(color: Colors.grey, fontSize: 9, fontFamily: 'monospace'),
           ),
         ]),
       ),
