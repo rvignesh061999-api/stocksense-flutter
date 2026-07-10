@@ -33,8 +33,26 @@ class StockSenseTaskHandler extends TaskHandler {
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     _stop = false;
     _scanN = 0;
-    await NotificationService().init();
-    await _runSession();
+    try {
+      await NotificationService().init();
+      await _runSession();
+    } catch (e, st) {
+      await _reportBgCrash('onStart/_runSession failed', e, st);
+    }
+  }
+
+  Future<void> _reportBgCrash(String context, Object e, StackTrace st) async {
+    final msg = '$context: $e';
+    try {
+      // Persist so it survives even if the app was closed when this happened.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('stocksense_bg_crash',
+          '${DateTime.now().toIso8601String()} | $msg\n$st');
+    } catch (_) {}
+    try {
+      // Tell the UI right away if it's currently open.
+      FlutterForegroundTask.sendDataToMain({'event': 'bgError', 'message': msg});
+    } catch (_) {}
   }
 
   @override
@@ -81,13 +99,15 @@ class StockSenseTaskHandler extends TaskHandler {
         topShorts: shorts.take(3).map((s) => '${s.symbol} ${s.confidence}%').toList(),
       ));
 
-      await notif.showScanComplete(
-        scanNum: _scanN,
-        buys: buys.length,
-        shorts: shorts.length,
-        topBuys: buys.take(3).map((s) => '${s.symbol} ${s.confidence}%').toList(),
-        topShorts: shorts.take(3).map((s) => '${s.symbol} ${s.confidence}%').toList(),
-      );
+      try {
+        await notif.showScanComplete(
+          scanNum: _scanN,
+          buys: buys.length,
+          shorts: shorts.length,
+          topBuys: buys.take(3).map((s) => '${s.symbol} ${s.confidence}%').toList(),
+          topShorts: shorts.take(3).map((s) => '${s.symbol} ${s.confidence}%').toList(),
+        );
+      } catch (_) {}
 
       FlutterForegroundTask.sendDataToMain({
         'event': 'scanComplete',
@@ -116,7 +136,9 @@ class StockSenseTaskHandler extends TaskHandler {
       if (_stop) break;
       await _rest(notif, rest, _scanN);
     }
-    await notif.clearAll();
+    try {
+      await notif.clearAll();
+    } catch (_) {}
   }
 
   Future<List<StockSignal>> _scan(
@@ -136,13 +158,17 @@ class StockSenseTaskHandler extends TaskHandler {
         lastFailureSymbol = ALL_STOCKS[i];
       }
       if (i == 0 || i % 5 == 0 || i == ALL_STOCKS.length - 1) {
-        await notif.showScanProgress(
-          scanned: i + 1,
-          total: ALL_STOCKS.length, // Fix #7 — use actual list length
-          buys: buys,
-          shorts: shorts,
-          scanNum: scanN,
-        );
+        try {
+          await notif.showScanProgress(
+            scanned: i + 1,
+            total: ALL_STOCKS.length, // Fix #7 — use actual list length
+            buys: buys,
+            shorts: shorts,
+            scanNum: scanN,
+          );
+        } catch (_) {
+          // Never let a notification failure kill the whole scan loop.
+        }
         FlutterForegroundTask.sendDataToMain({
           'event': 'scanProgress',
           'scanned': i + 1,
@@ -168,8 +194,10 @@ class StockSenseTaskHandler extends TaskHandler {
       await Future.delayed(const Duration(seconds: 1));
       left--;
       if (left % 10 == 0 || left <= 5) {
-        await notif.showRestCountdown(
-            secondsLeft: left, scanNum: scanN, topSignals: []);
+        try {
+          await notif.showRestCountdown(
+              secondsLeft: left, scanNum: scanN, topSignals: []);
+        } catch (_) {}
         FlutterForegroundTask.sendDataToMain({
           'event': 'restTick', 'secsLeft': left, 'scanNum': scanN,
         });
