@@ -76,6 +76,14 @@ class _S extends State<TimerScanScreen> {
         _rest = true;
         _status = 'RESTING ${_restSecs}S BEFORE SCAN #${_scanN + 1}';
       });
+    } else if (event == 'bgError') {
+      // 2026-07-08: the background scan crashed — show it directly instead
+      // of leaving the screen frozen at "Analysing: ..." with no explanation.
+      setState(() {
+        _status = 'BACKGROUND ERROR';
+        _lastError = d['message'] ?? 'Unknown background error';
+        _failures = -1; // sentinel: distinguishes a hard crash from normal API failures
+      });
     }
   }
 
@@ -161,7 +169,9 @@ class _S extends State<TimerScanScreen> {
       ])),
       // Fix #8/#17 — distinguish "no signals found" from "server/network
       // issue" instead of silently showing zero results either way.
-      if (_failures > 0)
+      // 2026-07-08: also handles _failures == -1, the sentinel for a hard
+      // background-isolate crash (see bgError event above).
+      if (_failures != 0)
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           padding: const EdgeInsets.all(12),
@@ -175,8 +185,12 @@ class _S extends State<TimerScanScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('$_failures request(s) failed this scan',
-                    style: const TextStyle(color: Color(COLOR_RED), fontWeight: FontWeight.bold, fontSize: 13)),
+                Text(
+                  _failures == -1
+                      ? 'Background scan crashed'
+                      : '$_failures request(s) failed this scan',
+                  style: const TextStyle(color: Color(COLOR_RED), fontWeight: FontWeight.bold, fontSize: 13),
+                ),
                 if (_lastError != null)
                   Text(_lastError!,
                       style: const TextStyle(color: Colors.white70, fontSize: 11),
