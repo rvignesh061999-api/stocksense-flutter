@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
@@ -169,6 +170,22 @@ class StockSenseTaskHandler extends TaskHandler {
         } catch (_) {
           // Never let a notification failure kill the whole scan loop.
         }
+        // 2026-07-11: persist a lightweight progress marker so the main
+        // isolate's fallback poll can show live incremental progress
+        // instead of only ever seeing "scan complete" at the very end.
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('scan_progress_marker', jsonEncode({
+            'scanned': i + 1,
+            'total': ALL_STOCKS.length,
+            'buys': buys,
+            'shorts': shorts,
+            'currentSymbol': ALL_STOCKS[i],
+            'scanNum': scanN,
+            'failures': failures,
+            'time': DateTime.now().toIso8601String(),
+          }));
+        } catch (_) {}
         FlutterForegroundTask.sendDataToMain({
           'event': 'scanProgress',
           'scanned': i + 1,
