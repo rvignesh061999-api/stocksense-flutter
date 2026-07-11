@@ -12,6 +12,8 @@ class TimerLogService {
   static const _key = 'timer_log_v1';
   static const _maxEntries = 200;
 
+  static const _debugKey = 'timer_log_debug_v1';
+
   Future<List<TimerLogEntry>> loadAll() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -36,7 +38,26 @@ class TimerLogService {
         _key,
         jsonEncode(entries.map((e) => e.toJson()).toList()),
       );
-    } catch (_) {}
+      await prefs.setString(_debugKey,
+          'OK: wrote entry #${entries.length} at ${DateTime.now().toIso8601String()}');
+    } catch (e, st) {
+      // 2026-07-08: previously silent — now visible via the debug line so
+      // we can tell "never attempted" apart from "attempted but failed."
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_debugKey,
+            'WRITE FAILED at ${DateTime.now().toIso8601String()}: $e');
+      } catch (_) {}
+    }
+  }
+
+  Future<String> debugStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_debugKey) ?? 'no write attempted yet';
+    } catch (e) {
+      return 'debugStatus read failed: $e';
+    }
   }
 
   Future<void> clear() async {
