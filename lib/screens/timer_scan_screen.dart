@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/scan_service.dart';
 import '../services/notification_service.dart';
 import '../services/timer_log_service.dart';
@@ -78,10 +80,40 @@ class _S extends State<TimerScanScreen> {
       final writeStatus = await TimerLogService().debugStatus();
       final changed = entries.length != _lastKnownLogCount;
       _lastKnownLogCount = entries.length;
+
+      // 2026-07-11: also read the live incremental progress marker, so we
+      // can see the scan actually moving before it fully completes.
+      String progressDebug = 'no progress marker yet';
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final raw = prefs.getString('scan_progress_marker');
+        if (raw != null) {
+          final p = jsonDecode(raw) as Map<String, dynamic>;
+          progressDebug = 'scan #${p['scanNum']}: ${p['scanned']}/${p['total']} '
+              '(${p['currentSymbol']}) @ ${p['time']}';
+          if (mounted) {
+            setState(() {
+              _scanned = p['scanned'] ?? _scanned;
+              _total = p['total'] ?? _total;
+              _buys = p['buys'] ?? _buys;
+              _shorts = p['shorts'] ?? _shorts;
+              _cur = p['currentSymbol'] ?? _cur;
+              _scanN = p['scanNum'] ?? _scanN;
+              _failures = p['failures'] ?? _failures;
+              _run = true;
+              _rest = false;
+              _status = 'SCAN #$_scanN IN PROGRESS... (via fallback poll)';
+            });
+          }
+        }
+      } catch (e) {
+        progressDebug = 'progress marker read failed: $e';
+      }
+
       if (mounted) {
         setState(() {
           _pollDebug = 'poll #$_pollRunCount @ $now \u2014 ${entries.length} entries'
-              '${changed ? " (NEW)" : ""}\nwrite-side: $writeStatus';
+              '${changed ? " (NEW)" : ""}\n$progressDebug\nwrite-side: $writeStatus';
         });
       }
       if (entries.isNotEmpty && changed && mounted) {
