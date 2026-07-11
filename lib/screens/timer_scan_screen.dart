@@ -75,12 +75,13 @@ class _S extends State<TimerScanScreen> {
     final now = TimeOfDay.now().format(context);
     try {
       final entries = await TimerLogService().loadAll();
+      final writeStatus = await TimerLogService().debugStatus();
       final changed = entries.length != _lastKnownLogCount;
       _lastKnownLogCount = entries.length;
       if (mounted) {
         setState(() {
-          _pollDebug = 'poll #$_pollRunCount @ $now \u2014 ${entries.length} entries in storage'
-              '${changed ? " (NEW)" : ""}';
+          _pollDebug = 'poll #$_pollRunCount @ $now \u2014 ${entries.length} entries'
+              '${changed ? " (NEW)" : ""}\nwrite-side: $writeStatus';
         });
       }
       if (entries.isNotEmpty && changed && mounted) {
