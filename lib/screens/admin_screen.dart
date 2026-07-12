@@ -30,9 +30,9 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Future<void> _load() async {
-    await ApiMonitorService().refresh();
+    final entries = await ApiMonitorService().loadAll();
     if (!mounted) return;
-    setState(() => _all = ApiMonitorService().entries);
+    setState(() => _all = entries);
   }
 
   List<ApiLogEntry> get _filtered {
@@ -196,17 +196,25 @@ class _AdminScreenState extends State<AdminScreen> {
           // Live stats bar
           Padding(
             padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                _statBox('${ApiMonitorService().totalCalls}', 'TOTAL CALLS', const Color(COLOR_TEXT)),
-                _statBox('${ApiMonitorService().successCount}', 'SUCCESS', const Color(COLOR_GREEN)),
-                _statBox('${ApiMonitorService().errorCount}', 'ERRORS', const Color(COLOR_RED)),
-                _statBox(
-                  ApiMonitorService().avgMs == 0 ? '\u2014' : '${ApiMonitorService().avgMs.round()}',
-                  'AVG MS', const Color(COLOR_YELLOW),
-                ),
-              ],
-            ),
+            child: Builder(builder: (_) {
+              final total = _all.length;
+              final success = _all.where((e) => e.success).length;
+              final errors = total - success;
+              final avgMs = _all.isEmpty
+                  ? 0
+                  : _all.map((e) => e.durationMs).reduce((a, b) => a + b) / _all.length;
+              return Row(
+                children: [
+                  _statBox('$total', 'TOTAL CALLS', const Color(COLOR_TEXT)),
+                  _statBox('$success', 'SUCCESS', const Color(COLOR_GREEN)),
+                  _statBox('$errors', 'ERRORS', const Color(COLOR_RED)),
+                  _statBox(
+                    avgMs == 0 ? '\u2014' : '${avgMs.round()}',
+                    'AVG MS', const Color(COLOR_YELLOW),
+                  ),
+                ],
+              );
+            }),
           ),
 
           // Search

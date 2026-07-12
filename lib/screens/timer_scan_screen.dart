@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import '../services/scan_service.dart';
 import '../services/notification_service.dart';
 import '../services/timer_log_service.dart';
@@ -85,9 +86,10 @@ class _S extends State<TimerScanScreen> {
       // can see the scan actually moving before it fully completes.
       String progressDebug = 'no progress marker yet';
       try {
-        final prefs = await SharedPreferences.getInstance();
-        final raw = prefs.getString('scan_progress_marker');
-        if (raw != null) {
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/scan_progress_marker.json');
+        if (await file.exists()) {
+          final raw = await file.readAsString();
           final p = jsonDecode(raw) as Map<String, dynamic>;
           progressDebug = 'scan #${p['scanNum']}: ${p['scanned']}/${p['total']} '
               '(${p['currentSymbol']}) @ ${p['time']}';
