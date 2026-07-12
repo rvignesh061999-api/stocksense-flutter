@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'api_service.dart';
 import 'notification_service.dart';
 import 'timer_log_service.dart';
@@ -170,12 +172,15 @@ class StockSenseTaskHandler extends TaskHandler {
         } catch (_) {
           // Never let a notification failure kill the whole scan loop.
         }
-        // 2026-07-11: persist a lightweight progress marker so the main
-        // isolate's fallback poll can show live incremental progress
-        // instead of only ever seeing "scan complete" at the very end.
+        // 2026-07-11: SharedPreferences writes from this background isolate
+        // were confirmed NOT visible to the main isolate's reads (proven
+        // across three independent features simultaneously). Switched to
+        // plain file I/O instead, which is OS-level and isn't tied to any
+        // plugin's per-isolate channel/cache state.
         try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('scan_progress_marker', jsonEncode({
+          final dir = await getTemporaryDirectory();
+          final file = File('${dir.path}/scan_progress_marker.json');
+          await file.writeAsString(jsonEncode({
             'scanned': i + 1,
             'total': ALL_STOCKS.length,
             'buys': buys,
