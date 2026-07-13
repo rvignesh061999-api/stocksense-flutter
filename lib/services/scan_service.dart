@@ -215,6 +215,18 @@ class StockSenseTaskHandler extends TaskHandler {
     while (left > 0 && !_stop) {
       await Future.delayed(const Duration(seconds: 1));
       left--;
+      // 2026-07-12: write every second so the fallback poll always has an
+      // accurate countdown value whenever it happens to check (every 5s).
+      try {
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/scan_rest_marker.json');
+        await file.writeAsString(jsonEncode({
+          'phase': 'resting',
+          'secsLeft': left,
+          'scanNum': scanN,
+          'time': DateTime.now().toIso8601String(),
+        }));
+      } catch (_) {}
       if (left % 10 == 0 || left <= 5) {
         try {
           await notif.showRestCountdown(
@@ -225,6 +237,13 @@ class StockSenseTaskHandler extends TaskHandler {
         });
       }
     }
+    // Mark rest phase as over so a stale "resting" marker doesn't linger
+    // and get misread by the poll after the next scan has already started.
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/scan_rest_marker.json');
+      await file.writeAsString(jsonEncode({'phase': 'done', 'scanNum': scanN}));
+    } catch (_) {}
   }
 }
 
