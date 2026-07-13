@@ -85,6 +85,7 @@ class _S extends State<TimerScanScreen> {
       // 2026-07-11: also read the live incremental progress marker, so we
       // can see the scan actually moving before it fully completes.
       String progressDebug = 'no progress marker yet';
+      DateTime? progressTime;
       try {
         final dir = await getTemporaryDirectory();
         final file = File('${dir.path}/scan_progress_marker.json');
@@ -93,6 +94,7 @@ class _S extends State<TimerScanScreen> {
           final p = jsonDecode(raw) as Map<String, dynamic>;
           progressDebug = 'scan #${p['scanNum']}: ${p['scanned']}/${p['total']} '
               '(${p['currentSymbol']}) @ ${p['time']}';
+          progressTime = DateTime.tryParse(p['time'] ?? '');
           if (mounted) {
             setState(() {
               _scanned = p['scanned'] ?? _scanned;
@@ -112,10 +114,40 @@ class _S extends State<TimerScanScreen> {
         progressDebug = 'progress marker read failed: $e';
       }
 
+      // 2026-07-12: also read the rest-phase marker. Whichever marker
+      // (scanning vs resting) is more recent tells us the actual current
+      // phase — without this, the screen stayed stuck showing "IN
+      // PROGRESS" forever during rest, since only the progress marker
+      // was being checked.
+      String restDebug = 'no rest marker yet';
+      try {
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/scan_rest_marker.json');
+        if (await file.exists()) {
+          final raw = await file.readAsString();
+          final r = jsonDecode(raw) as Map<String, dynamic>;
+          final restTime = DateTime.tryParse(r['time'] ?? '');
+          restDebug = 'rest phase=${r['phase']} secsLeft=${r['secsLeft']} @ ${r['time']}';
+          final isNewerThanProgress =
+              restTime != null && (progressTime == null || restTime.isAfter(progressTime));
+          if (r['phase'] == 'resting' && isNewerThanProgress && mounted) {
+            setState(() {
+              _restSecs = r['secsLeft'] ?? 0;
+              _scanN = r['scanNum'] ?? _scanN;
+              _run = true;
+              _rest = true;
+              _status = 'RESTING ${_restSecs}S BEFORE SCAN #${_scanN + 1} (via fallback poll)';
+            });
+          }
+        }
+      } catch (e) {
+        restDebug = 'rest marker read failed: $e';
+      }
+
       if (mounted) {
         setState(() {
           _pollDebug = 'poll #$_pollRunCount @ $now \u2014 ${entries.length} entries'
-              '${changed ? " (NEW)" : ""}\n$progressDebug\nwrite-side: $writeStatus';
+              '${changed ? " (NEW)" : ""}\n$progressDebug\n$restDebug\nwrite-side: $writeStatus';
         });
       }
       if (entries.isNotEmpty && changed && mounted) {

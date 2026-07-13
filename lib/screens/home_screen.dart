@@ -108,8 +108,12 @@ class _S extends State<HomeScreen> {
       ),
       Container(height: 2, decoration: const BoxDecoration(
           gradient: LinearGradient(colors: [Color(COLOR_GREEN), Color(0xFF004422)]))),
-      Expanded(child: IndexedStack(index: _idx,
-          children: const [TimerScanScreen(), TimerLogScreen(), AdminScreen(), SettingsScreen()])),
+      Expanded(child: [
+        const TimerScanScreen(),
+        const TimerLogScreen(),
+        const AdminScreen(),
+        const SettingsScreen(),
+      ][_idx]),
     ])),
     bottomNavigationBar: BottomNavigationBar(
       currentIndex: _idx,
